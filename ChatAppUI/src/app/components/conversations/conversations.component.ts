@@ -1,0 +1,178 @@
+import { catchError } from 'rxjs';
+import { ApiResponse } from './../../models/api-response';
+import { Participant, UserConversation } from './../../models/conversations/responses/user-conversations-response';
+import { MessageResponse } from './../../models/conversations/responses/conversation-messages-response';
+import { ConversationsService } from './../../services/conversations.service';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { ConversationListComponent } from './conversation-list/conversation-list.component';
+import { ConversationWindowComponent } from './conversation-window/conversation-window.component';
+import { AuthenticationService } from '../../services/authentication.service';
+import { ChatHubService } from '../../services/chat-hub.service';
+import { ConversationType } from '../../enums/conversation-type';
+import { User } from '../../models/interfaces/userInterface';
+@Component({
+  selector: 'app-conversations',
+  standalone: true,
+  imports: [
+    CommonModule,
+    RouterModule,
+    ConversationListComponent,
+    ConversationWindowComponent,
+  ],
+  templateUrl: './conversations.component.html',
+  styleUrl: './conversations.component.css',
+})
+export class ConversationsComponent implements OnInit, OnDestroy {
+
+  selectedConversation: UserConversation | null = null;
+  conversations: UserConversation[] = [];
+  others: UserConversation[] = [];
+  newMessage: MessageResponse | null = null;
+
+  constructor(
+    private authService: AuthenticationService,
+    private conversationsService: ConversationsService,
+    private chatHubService: ChatHubService
+  ) { }
+
+  ngOnInit(): void {
+    this.conversationsService.getUserConversations().subscribe({
+      next: (list) => {
+        this.conversations = list ?? [];
+      },
+      error: (err) => {
+        console.error(err);
+      },
+    });
+
+    this.chatHubService.startConnection()?.then(() => {
+      console.log('SignalR connection started successfully');
+
+      this.chatHubService.onNewConversation((newConversation: UserConversation) => {
+        this.handleNewConversationReceived(newConversation);
+      });
+
+      this.chatHubService.onNewDirectConversationInfo((newConversation: UserConversation) => {
+        this.handleNewDirectConversationInfoReceived(newConversation);
+      });
+
+      this.chatHubService.onReceiveMessage((message: MessageResponse) => {
+        this.handleMessageReceived(message);
+      });
+
+    }).catch(err => {
+      console.error('Error starting SignalR connection:', err);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.chatHubService.stopConnection()?.then(() => {
+      console.log('SignalR connection stopped');
+    }).catch(err => {
+      console.error('Error stopping SignalR connection:', err);
+    });
+  }
+
+
+  private handleNewConversationReceived(newConversation: UserConversation): void {
+    const existingConversation = this.conversations.find(conv =>
+      conv.id === newConversation.id
+    );
+    if (!existingConversation)
+      this.conversations = [newConversation, ...this.conversations];
+  }
+
+  private handleNewDirectConversationInfoReceived(newConversation: UserConversation): void {
+    this.others = [newConversation];
+    if (this.checkIfTheSameDirectConversation(this.selectedConversation, newConversation))
+      Object.assign(this.selectedConversation!, newConversation);
+    else {
+      this.selectedConversation = newConversation;
+    }
+  }
+
+
+  private handleMessageReceived(message: MessageResponse): void {
+    console.log('New message received via SignalR:', message);
+
+    const conversation = this.conversations.find(conv => conv.id === message.conversationId);
+
+    if (conversation) {
+      conversation.lastMessageAt = message.sentAt;
+      this.conversations = this.conversations.filter(conv => conv.id !== message.conversationId);
+      this.conversations = [conversation, ...this.conversations];
+
+      // If this is the currently selected conversation, we might want to refresh its messages
+      if (this.selectedConversation && this.selectedConversation.id === message.conversationId) {
+        this.newMessage = message;
+      }
+    } else {
+      this.conversationsService.getConversationById(message.conversationId).subscribe({
+        next: (conv) => {
+          if (conv) {
+            console.log('Fetched conversation for new message:', conv);
+            if (this.selectedConversation?.id == conv.id) {
+              this.newMessage = message;
+              this.others = this.others.filter(otherConv => otherConv.id !== conv.id);
+            }
+            this.conversations = [conv, ...this.conversations];
+
+
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching conversation for new message:', error);
+        }
+      });
+    }
+  }
+
+
+
+  private checkIfTheSameDirectConversation(firstConversation: UserConversation | null, secondConversation: UserConversation | null): boolean {
+    if (firstConversation?.type !== ConversationType.Direct || secondConversation?.type !== ConversationType.Direct)
+      return false;
+
+    const secondConversationUserIds = secondConversation.participants.map(p => p.userId);
+    return firstConversation.participants.every(fp =>
+      secondConversationUserIds.includes(fp.userId)
+    );
+  }
+
+
+
+
+  onConversationSelected(conversation: UserConversation) {
+    if (!conversation.id) {
+      this.chatHubService.createConversation(
+        conversation.participants.map(p => p.userId),
+        conversation.title,
+        conversation.type
+      ).then(() => {
+        console.log('Conversation created successfully');
+      }).catch(err => {
+        console.error('Error creating new conversation:', err);
+      });
+    }
+    else
+      this.selectedConversation = conversation;
+  }
+
+  onSearchChanged(searchValue: string) {
+    this.others = [];
+    this.conversationsService.getOtherConversations(searchValue).subscribe({
+      next: (conversation) => {
+        this.others = [conversation];
+        console.log('Other conversations:', this.others);
+      },
+      error: (error) => {
+        console.log('User not found or error occurred:', error);
+      }
+    });
+  }
+
+
+}
+

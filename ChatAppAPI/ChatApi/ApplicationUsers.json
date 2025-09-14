@@ -1,0 +1,10 @@
+[
+  {
+    "UserName": "admin",
+    "Email": "admin@project.com",
+    "FullName": "admin",
+    "Country": "Egypt",
+    "EmailConfirmed": true,
+    "PhoneNumberConfirmed": true
+  }
+]

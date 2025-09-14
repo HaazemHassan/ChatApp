@@ -1,0 +1,28 @@
+<div class="conversations-container">
+  <div class="conversations-layout">
+    <div class="conversations-sidebar">
+      <app-conversation-list
+        [conversations]="conversations"
+        (conversationSelected)="onConversationSelected($event)"
+        [selectedConversation]="selectedConversation"
+        (searchChanged)="onSearchChanged($event)"
+        [others]="others"
+      ></app-conversation-list>
+    </div>
+
+    <div class="conversation-main">
+      @if (selectedConversation) {
+      <app-conversation-window
+        [conversation]="selectedConversation"
+        [newMessage]="newMessage"
+      >
+      </app-conversation-window>
+      } @else {
+      <div class="select-conversation-message">
+        <h3>Select a conversation to start messaging</h3>
+        <p>Choose a conversation from the list to view and send messages.</p>
+      </div>
+      }
+    </div>
+  </div>
+</div>

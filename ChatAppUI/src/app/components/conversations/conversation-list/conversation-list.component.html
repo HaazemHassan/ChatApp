@@ -1,0 +1,73 @@
+<div class="conversation-list-container">
+  <div class="header">Conversations</div>
+
+  <!-- Search Bar -->
+  <div class="search-container">
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Search conversations..."
+      (input)="onSearchInput($event)"
+    />
+    <div class="search-icon">
+      <svg
+        width="16"
+        height="16"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
+      </svg>
+    </div>
+  </div>
+
+  <!-- Scrollable Content Area -->
+  <div class="scrollable-content">
+    @if (error) {
+    <div class="state error">{{ error }}</div>
+    } @else {
+
+    <!-- Main Conversations List -->
+    @if (filteredConversations.length > 0) {
+    <div class="section">
+      <div class="section-title">Your Conversations</div>
+      <div class="list">
+        @for (c of filteredConversations; track c.id) {
+        <app-conversation-item
+          [conversation]="c"
+          [isSelected]="isSelected(c)"
+          (selectedConversation)="onSelectConversation($event)"
+        ></app-conversation-item>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Others Section -->
+    @if (others.length > 0) {
+    <div class="section">
+      <div class="section-title">Other Users</div>
+      <div class="list others-list">
+        @for (other of others; track other.id) {
+        <app-conversation-item
+          [conversation]="other"
+          [isSelected]="isSelected(other)"
+          (selectedConversation)="onSelectConversation($event)"
+        ></app-conversation-item>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Empty State -->
+    @if (filteredConversations.length === 0 && others.length === 0) {
+    <div class="state">No conversations found</div>
+    } }
+  </div>
+</div>

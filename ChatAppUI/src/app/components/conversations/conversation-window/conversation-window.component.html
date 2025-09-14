@@ -1,0 +1,74 @@
+<div class="conversation-window">
+  <!-- Header -->
+  <div class="conversation-header">
+    <h2 class="conversation-title">{{ conversation().title }}</h2>
+  </div>
+
+  <!-- Messages Container -->
+  <div class="messages-container">
+    @if (loading) {
+    <div class="loading-state">
+      <p>Loading messages...</p>
+    </div>
+    } @if (error) {
+    <div class="error-state">
+      <p>{{ error }}</p>
+    </div>
+    } @if (!loading && !error && messages.length === 0) {
+    <div class="empty-state">
+      <p>No messages yet. Start the conversation!</p>
+    </div>
+    }
+
+    <!-- Messages List -->
+    @if (!loading && !error && messages.length > 0) {
+    <div #messagesList class="messages-list">
+      @for (message of messages; track message.id) {
+      <div
+        class="message-wrapper"
+        [class.current-user]="isCurrentUserMessage(message)"
+        [class.other-user]="!isCurrentUserMessage(message)"
+      >
+        <div class="message-bubble">
+          <div class="message-content">{{ message.content }}</div>
+          <div class="message-meta">
+            @if (isCurrentUserMessage(message)) {
+            <span class="sender-name"> You </span>
+            }
+            <span class="message-time">{{
+              formatMessageTime(message.sentAt)
+            }}</span>
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+  <!-- Message Input -->
+  <div class="message-input-container">
+    <div class="input-wrapper">
+      <input
+        type="text"
+        placeholder="Type your message..."
+        class="message-input"
+        [(ngModel)]="messageText"
+        (keyup.enter)="sendMessage()"
+        #messageInput
+      />
+      <button class="send-button" type="button" (click)="sendMessage()">
+        <svg
+          class="send-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22,2 15,22 11,13 2,9"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>

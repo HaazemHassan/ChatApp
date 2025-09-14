@@ -1,0 +1,29 @@
+<nav class="navbar">
+  <div class="navbar-container">
+    <div class="navbar-brand">
+      <a routerLink="/home" class="brand-link">
+        <span class="brand-icon">💬</span>
+        <span class="brand-text">ChatApp</span>
+      </a>
+    </div>
+
+    <div class="navbar-nav">
+      <a routerLink="/home" routerLinkActive="active" class="nav-link">
+        Home
+      </a>
+
+      <div class="auth-buttons">
+        @if (!isAuthenticated()) {
+        <a routerLink="/login" routerLinkActive="active" class="nav-link">
+          Login
+        </a>
+        <a routerLink="/register" routerLinkActive="active" class="nav-link">
+          Register
+        </a>
+        } @if (isAuthenticated()) {
+        <button (click)="logout()" class="btn btn-logout">Logout</button>
+        }
+      </div>
+    </div>
+  </div>
+</nav>

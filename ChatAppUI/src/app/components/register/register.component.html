@@ -1,0 +1,209 @@
+<div class="register-container">
+  <div class="register-card">
+    <div class="register-header">
+      <h2 class="register-title">Create Account</h2>
+      <p class="register-subtitle">Join our community and start chatting</p>
+    </div>
+
+    <form
+      [formGroup]="registerForm"
+      (ngSubmit)="register()"
+      class="register-form"
+    >
+      <!-- Full Name and Username Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fullName" class="form-label">Full Name</label>
+          <input
+            id="fullName"
+            type="text"
+            formControlName="fullName"
+            class="form-input"
+            [class.error]="fullName?.invalid && fullName?.touched"
+            placeholder="Enter your full name"
+          />
+          @if (fullName?.invalid && fullName?.touched) {
+          <div class="error-message">
+            @if (fullName?.errors?.['required']) {
+            <span>Full name is required</span>
+            } @if (fullName?.errors?.['minlength']) {
+            <span>Full name must be at least 2 characters</span>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="userName" class="form-label">Username</label>
+          <input
+            id="userName"
+            type="text"
+            formControlName="userName"
+            class="form-input"
+            [class.error]="userName?.invalid && userName?.touched"
+            placeholder="Choose a username"
+          />
+          @if (userName?.invalid && userName?.touched) {
+          <div class="error-message">
+            @if (userName?.errors?.['required']) {
+            <span>Username is required</span>
+            } @if (userName?.errors?.['minlength']) {
+            <span>Username must be at least 3 characters</span>
+            }
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          class="form-input"
+          [class.error]="email?.invalid && email?.touched"
+          placeholder="Enter your email address"
+        />
+        @if (email?.invalid && email?.touched) {
+        <div class="error-message">
+          @if (email?.errors?.['required']) {
+          <span>Email is required</span>
+          } @if (email?.errors?.['email']) {
+          <span>Please enter a valid email address</span>
+          }
+        </div>
+        }
+      </div>
+
+      <!-- Password and Confirm Password Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            class="form-input"
+            [class.error]="password?.invalid && password?.touched"
+            placeholder="Enter your password"
+          />
+          @if (password?.invalid && password?.touched) {
+          <div class="error-message">
+            @if (password?.errors?.['required']) {
+            <span>Password is required</span>
+            } @if (password?.errors?.['minlength']) {
+            <span>Password must be at least 6 characters</span>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label"
+            >Confirm Password</label
+          >
+          <input
+            id="confirmPassword"
+            type="password"
+            formControlName="confirmPassword"
+            class="form-input"
+            [class.error]="confirmPassword?.invalid && confirmPassword?.touched"
+            placeholder="Confirm your password"
+          />
+          @if (confirmPassword?.invalid && confirmPassword?.touched) {
+          <div class="error-message">
+            @if (confirmPassword?.errors?.['required']) {
+            <span>Please confirm your password</span>
+            } @if (confirmPassword?.errors?.['mismatch']) {
+            <span>Passwords do not match</span>
+            }
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Address -->
+      <div class="form-group">
+        <label for="address" class="form-label">Address</label>
+        <input
+          id="address"
+          type="text"
+          formControlName="address"
+          class="form-input"
+          [class.error]="address?.invalid && address?.touched"
+          placeholder="Enter your address"
+        />
+        @if (address?.invalid && address?.touched) {
+        <div class="error-message">
+          @if (address?.errors?.['required']) {
+          <span>Address is required</span>
+          }
+        </div>
+        }
+      </div>
+
+      <!-- Country and Phone Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="country" class="form-label">Country</label>
+          <input
+            id="country"
+            type="text"
+            formControlName="country"
+            class="form-input"
+            [class.error]="country?.invalid && country?.touched"
+            placeholder="Enter your country"
+          />
+          @if (country?.invalid && country?.touched) {
+          <div class="error-message">
+            @if (country?.errors?.['required']) {
+            <span>Country is required</span>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="phoneNumber" class="form-label">Phone Number</label>
+          <input
+            id="phoneNumber"
+            type="tel"
+            formControlName="phoneNumber"
+            class="form-input"
+            [class.error]="phoneNumber?.invalid && phoneNumber?.touched"
+            placeholder="Enter your phone number"
+          />
+          @if (phoneNumber?.invalid && phoneNumber?.touched) {
+          <div class="error-message">
+            @if (phoneNumber?.errors?.['required']) {
+            <span>Phone number is required</span>
+            } @if (phoneNumber?.errors?.['pattern']) {
+            <span>Please enter a valid phone number</span>
+            }
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button
+          type="submit"
+          class="register-btn"
+          [disabled]="registerForm.invalid"
+          [class.disabled]="registerForm.invalid"
+        >
+          <span class="btn-text">Create Account</span>
+        </button>
+      </div>
+    </form>
+
+    <div class="register-footer">
+      <p class="footer-text">
+        Already have an account?
+        <a href="/login" class="footer-link">Sign in</a>
+      </p>
+    </div>
+  </div>
+</div>

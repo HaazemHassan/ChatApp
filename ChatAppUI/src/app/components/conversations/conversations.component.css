@@ -1,0 +1,67 @@
+.conversations-container {
+  height: 100vh;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+.unauthorized-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  text-align: center;
+}
+
+.unauthorized-message a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.unauthorized-message a:hover {
+  text-decoration: underline;
+}
+
+.conversations-layout {
+  display: flex;
+  height: calc(100vh - 60px);
+  flex: 1;
+  overflow: hidden;
+}
+
+.conversations-sidebar {
+  width: 350px;
+  min-width: 300px;
+  border-right: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+}
+
+.conversation-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+.select-conversation-message {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+  color: #6c757d;
+}
+
+.select-conversation-message h3 {
+  margin-bottom: 1rem;
+  color: #495057;
+}
+
+.select-conversation-message p {
+  margin: 0;
+  font-size: 14px;
+}

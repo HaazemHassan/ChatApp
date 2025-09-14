@@ -1,0 +1,69 @@
+<div class="home-container">
+  <div class="hero-section">
+    <div class="hero-content">
+      <div class="hero-icon">💬</div>
+      <h1 class="hero-title">Welcome to ChatApp</h1>
+      <p class="hero-subtitle">Connect, Chat, and Communicate Seamlessly</p>
+      <p class="hero-description">
+        Experience real-time messaging with our modern and intuitive chat
+        application. Built with Angular and designed for seamless communication.
+      </p>
+
+      <div class="hero-buttons">
+        @if (!isAuthenticated()) {
+        <button (click)="navigateToLogin()" class="btn btn-primary">
+          Get Started
+        </button>
+        <button (click)="navigateToRegister()" class="btn btn-secondary">
+          <span class="btn-icon"></span>
+          Register now!
+        </button>
+        } @if (isAuthenticated()) {
+        <button (click)="navigateToChat()" class="btn btn-primary">
+          <span class="btn-icon">💬</span>
+          Start Chatting
+        </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="features-section">
+    <h2 class="features-title">Why Choose ChatApp?</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3 class="feature-title">Real-time Messaging</h3>
+        <p class="feature-description">
+          Instant message delivery with live typing indicators and read
+          receipts.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3 class="feature-title">Secure & Private</h3>
+        <p class="feature-description">
+          End-to-end encryption ensures your conversations stay private and
+          secure.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3 class="feature-title">Cross-Platform</h3>
+        <p class="feature-description">
+          Access your chats from any device - desktop, tablet, or mobile.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3 class="feature-title">Modern Design</h3>
+        <p class="feature-description">
+          Beautiful, intuitive interface designed for the best user experience.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,18 @@
+<button
+  type="button"
+  class="item"
+  [class.selected]="isSelected()"
+  (click)="onSelect()"
+  [attr.aria-pressed]="isSelected()"
+  [attr.aria-label]="'Open conversation ' + conversation().title"
+>
+  <div class="avatar" aria-hidden="true">
+    {{ extractInitialsFromTitle(conversation().title) }}
+  </div>
+
+  <div class="content">
+    <div class="title" [title]="conversation().title">
+      {{ conversation().title }}
+    </div>
+  </div>
+</button>
