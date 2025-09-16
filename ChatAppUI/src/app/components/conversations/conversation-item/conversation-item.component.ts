@@ -25,7 +25,6 @@ export class ConversationItemComponent {
   }
 
   lastMessagePreview = computed((): string => {
-    console.log('Computing lastMessagePreview for conversation:', this.conversation());
     const lastMessage = this.conversation().lastMessage;
     if (!lastMessage || !lastMessage.content)
       return 'No messages yet';

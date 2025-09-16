@@ -77,11 +77,12 @@
 }
 
 .message-wrapper.current-user {
-  justify-content: flex-start;
+  justify-content: flex-end;
 }
 
 .message-wrapper.other-user {
-  justify-content: flex-end;
+  justify-content: flex-start;
+
 }
 
 .message-bubble {
@@ -120,12 +121,12 @@
 }
 
 .current-user .message-meta {
-  justify-content: flex-start;
+  justify-content: flex-end;
   color: #6b7280;
 }
 
 .other-user .message-meta {
-  justify-content: flex-end;
+  justify-content: flex-start;
   color: #dbeafe;
 }
 

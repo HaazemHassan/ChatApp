@@ -47,7 +47,6 @@ export class ConversationListComponent {
   }
 
   onSelectConversation(conversation: UserConversation) {
-    console
     this.conversationSelected.emit(conversation);
   }
 

@@ -26,17 +26,17 @@
       @for (message of messages; track message.id) {
       <div
         class="message-wrapper"
-        [class.current-user]="isCurrentUserMessage(message)"
-        [class.other-user]="!isCurrentUserMessage(message)"
+        [class.current-user]="message.senderId === this.currentUserId"
+        [class.other-user]="message.senderId !== this.currentUserId"
       >
         <div class="message-bubble">
           <div class="message-content">{{ message.content }}</div>
           <div class="message-meta">
-            @if (isCurrentUserMessage(message)) {
+            @if (message.senderId === this.currentUserId) {
             <span class="sender-name"> You </span>
             }
             <span class="message-time">{{
-              formatMessageTime(message.sentAt)
+              message.sentAt | formatMessageTime
             }}</span>
           </div>
         </div>

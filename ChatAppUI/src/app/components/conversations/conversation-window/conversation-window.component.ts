@@ -22,13 +22,14 @@ import {
   MessageResponse,
   ConversationMessagesResponse,
 } from '../../../models/conversations/responses/conversation-messages-response';
+import { FormatMessageTimePipe } from "../../../pipes/format-message-time.pipe";
 
 
 
 @Component({
   selector: 'app-conversation-window',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FormatMessageTimePipe],
   templateUrl: './conversation-window.component.html',
   styleUrl: './conversation-window.component.css',
 })
@@ -63,27 +64,42 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
         this.scrollToBottom(true);
       }
     });
+
   }
 
+
+
   ngOnInit(): void {
+
     this.currentUserId = this.authService.getCurrentUserId();
 
   }
 
 
+  private loadMessages(): void {
 
-  isCurrentUserMessage(message: MessageResponse): boolean {
-    return message.senderId === this.currentUserId;
+    if (!this.conversation() || !this.conversation().id) return;
+
+    this.loading = true;
+    this.error = null;
+
+    this.conversationsService
+      .getConversationMessages(this.conversation().id!)
+      .subscribe({
+        next: (response: ConversationMessagesResponse) => {
+          this.messages = response.messages || [];
+
+          this.loading = false;
+          this.shouldScrollToBottom = true;
+        },
+        error: (err) => {
+          this.error = 'Failed to load messages';
+          this.loading = false;
+          console.error('Error loading messages:', err);
+        },
+      });
   }
 
-  formatMessageTime(sentAt: string): string {
-    const utcDate = new Date(sentAt);
-
-    const date = sentAt.endsWith('Z')
-      ? utcDate
-      : new Date(sentAt + 'Z');
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
 
   ngAfterViewChecked(): void {
     if (this.shouldScrollToBottom && this.messagesList) {
@@ -115,30 +131,6 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   }
 
   //helpers
-  private loadMessages(): void {
-
-    if (!this.conversation() || !this.conversation().id) return;
-
-    this.loading = true;
-    this.error = null;
-
-    this.conversationsService
-      .getConversationMessages(this.conversation().id!)
-      .subscribe({
-        next: (response: ConversationMessagesResponse) => {
-          this.messages = response.messages || [];
-
-          this.loading = false;
-          this.shouldScrollToBottom = true;
-        },
-        error: (err) => {
-          this.error = 'Failed to load messages';
-          this.loading = false;
-          console.error('Error loading messages:', err);
-        },
-      });
-  }
-
   private scrollToBottom(smooth: boolean = false): void {
     try {
       if (this.messagesList?.nativeElement) {
