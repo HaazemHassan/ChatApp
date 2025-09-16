@@ -38,6 +38,8 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
 
             foreach (var conversationResponse in conversationResponses) {
                 conversationResponse.Title = await _chatService.GetConversationTitle(conversationResponse.Id);
+                var lastMessage = await _chatService.GetLastMessageInConversationAsync(conversationResponse.Id);
+                conversationResponse.LastMessage = _mapper.Map<MessageResponse>(lastMessage);
             }
 
             return Success(conversationResponses);
@@ -83,7 +85,10 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
                 return NotFound<GetConversationByIdResponse>("Conversation not found");
 
             var conversationResponse = _mapper.Map<GetConversationByIdResponse>(conversation);
+
             conversationResponse.Title = await _chatService.GetConversationTitle(conversationResponse.Id);
+            var lastMessage = await _chatService.GetLastMessageInConversationAsync(conversation.Id);
+            conversationResponse.LastMessage = _mapper.Map<MessageResponse>(lastMessage);
             return Success(conversationResponse);
         }
 
@@ -122,7 +127,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
                     Id = null,
                     Title = otherUser.FullName,
                     Type = ConversationType.Direct,
-                    LastMessageAt = null,
+                    LastMessage = null,
                     Participants = new List<ConversationParticipantResponse> {
                         new ConversationParticipantResponse {
                             Id = null,

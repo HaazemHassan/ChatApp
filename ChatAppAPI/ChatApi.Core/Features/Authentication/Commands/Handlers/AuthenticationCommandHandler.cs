@@ -20,17 +20,22 @@ namespace ChatApi.Core.Features.Authentication.Commands.Handlers {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IApplicationUserService _applicationUserService;
         IAuthenticationService _authenticationService;
+        ICurrentUserService _currentUserService;
 
 
-        public AuthenticationCommandHandler(IApplicationUserService applicationUserService, UserManager<ApplicationUser> userManager, IMapper mapper, IAuthenticationService authenticationService) {
+        public AuthenticationCommandHandler(IApplicationUserService applicationUserService, UserManager<ApplicationUser> userManager, IMapper mapper, IAuthenticationService authenticationService, ICurrentUserService currentUserService) {
             _applicationUserService = applicationUserService;
             _userManager = userManager;
             _mapper = mapper;
             this._authenticationService = authenticationService;
+            _currentUserService = currentUserService;
         }
 
 
         public async Task<Response<string>> Handle(RegisterCommand request, CancellationToken cancellationToken) {
+            if (_currentUserService.IsAuthenticated)
+                return BadRequest<string>("You are already signed in");
+
             var userMapped = _mapper.Map<ApplicationUser>(request);
             var serviceResult = await _applicationUserService.AddApplicationUser(userMapped, request.Password);
 
@@ -42,6 +47,9 @@ namespace ChatApi.Core.Features.Authentication.Commands.Handlers {
         }
 
         public async Task<Response<JwtResult>> Handle(SignInCommand request, CancellationToken cancellationToken) {
+            if (_currentUserService.IsAuthenticated)
+                return BadRequest<JwtResult>("You are already signed in");
+
             var userFromDb = await _userManager.FindByNameAsync(request.Username);
             if (userFromDb is null)
                 return Unauthorized<JwtResult>("Invalid username or password");

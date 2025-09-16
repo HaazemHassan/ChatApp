@@ -41,7 +41,7 @@
         @for (c of filteredConversations; track c.id) {
         <app-conversation-item
           [conversation]="c"
-          [isSelected]="isSelected(c)"
+          [isSelected]="isSelectedConversation()(c)"
           (selectedConversation)="onSelectConversation($event)"
         ></app-conversation-item>
         }
@@ -57,7 +57,7 @@
         @for (other of others; track other.id) {
         <app-conversation-item
           [conversation]="other"
-          [isSelected]="isSelected(other)"
+          [isSelected]="isSelectedConversation()(other)"
           (selectedConversation)="onSelectConversation($event)"
         ></app-conversation-item>
         }

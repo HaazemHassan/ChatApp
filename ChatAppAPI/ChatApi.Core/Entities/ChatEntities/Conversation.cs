@@ -18,12 +18,12 @@ namespace ChatApi.Core.Entities.ChatEntities {
 
         public int? CreatedByUserId { get; set; }
 
-        public DateTime LastMessageAt { get; set; } = DateTime.UtcNow;
+        public DateTime? LastMessageAt { get; set; }
         public bool IsActive { get; set; } = true;        //if not deleted  (soft delete)
 
         [ForeignKey(nameof(CreatedByUserId))]
         public virtual ApplicationUser? CreatedBy { get; set; }
         public virtual ICollection<ConversationParticipant> Participants { get; set; } = new HashSet<ConversationParticipant>();
-        public virtual ICollection<Message> Messages { get; set; }
+        public virtual ICollection<Message> Messages { get; set; } = new HashSet<Message>();
     }
 }

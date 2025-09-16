@@ -48,8 +48,6 @@ export class ConversationsComponent implements OnInit, OnDestroy {
     });
 
     this.chatHubService.startConnection()?.then(() => {
-      console.log('SignalR connection started successfully');
-
       this.chatHubService.onNewConversation((newConversation: UserConversation) => {
         this.handleNewConversationReceived(newConversation);
       });
@@ -69,7 +67,6 @@ export class ConversationsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.chatHubService.stopConnection()?.then(() => {
-      console.log('SignalR connection stopped');
     }).catch(err => {
       console.error('Error stopping SignalR connection:', err);
     });
@@ -95,16 +92,15 @@ export class ConversationsComponent implements OnInit, OnDestroy {
 
 
   private handleMessageReceived(message: MessageResponse): void {
-    console.log('New message received via SignalR:', message);
-
     const conversation = this.conversations.find(conv => conv.id === message.conversationId);
 
     if (conversation) {
-      conversation.lastMessageAt = message.sentAt;
+      // create new object instead of modifying existing one to ensure change detection
+      const updatedConversation = { ...conversation, lastMessage: message };
       this.conversations = this.conversations.filter(conv => conv.id !== message.conversationId);
-      this.conversations = [conversation, ...this.conversations];
+      this.conversations = [updatedConversation, ...this.conversations];
 
-      // If this is the currently selected conversation, we might want to refresh its messages
+      // If this is the currently selected conversation, we want to add this message in the conversation window
       if (this.selectedConversation && this.selectedConversation.id === message.conversationId) {
         this.newMessage = message;
       }
@@ -118,8 +114,6 @@ export class ConversationsComponent implements OnInit, OnDestroy {
               this.others = this.others.filter(otherConv => otherConv.id !== conv.id);
             }
             this.conversations = [conv, ...this.conversations];
-
-
           }
         },
         error: (error) => {
@@ -151,7 +145,6 @@ export class ConversationsComponent implements OnInit, OnDestroy {
         conversation.title,
         conversation.type
       ).then(() => {
-        console.log('Conversation created successfully');
       }).catch(err => {
         console.error('Error creating new conversation:', err);
       });
@@ -165,14 +158,12 @@ export class ConversationsComponent implements OnInit, OnDestroy {
     this.conversationsService.getOtherConversations(searchValue).subscribe({
       next: (conversation) => {
         this.others = [conversation];
-        console.log('Other conversations:', this.others);
       },
       error: (error) => {
         console.log('User not found or error occurred:', error);
       }
     });
   }
-
 
 }
 

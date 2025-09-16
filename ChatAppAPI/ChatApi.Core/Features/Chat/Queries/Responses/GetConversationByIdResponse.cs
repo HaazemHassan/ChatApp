@@ -5,8 +5,8 @@ namespace ChatApi.Core.Features.Chat.Queries.Responses {
         public int Id { get; set; }
         public string? Title { get; set; }
         public ConversationType Type { get; set; }
-        public DateTime LastMessageAt { get; set; }
         public List<ConversationParticipantResponse> Participants { get; set; } = new();
+        public MessageResponse? LastMessage { get; set; }
 
         //public bool IsActive { get; set; }
         //public DateTime CreatedAt { get; set; }

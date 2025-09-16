@@ -7,12 +7,24 @@
   [attr.aria-label]="'Open conversation ' + conversation().title"
 >
   <div class="avatar" aria-hidden="true">
-    {{ extractInitialsFromTitle(conversation().title) }}
+    {{ this.conversation().title | stringInitials }}
   </div>
 
   <div class="content">
-    <div class="title" [title]="conversation().title">
-      {{ conversation().title }}
+    <div class="header">
+      <div class="title" [title]="conversation().title">
+        {{ conversation().title }}
+      </div>
+      @if (conversation().lastMessage?.sentAt) {
+      <div class="time">
+        {{ conversation().lastMessage!.sentAt | timeAgo | async }}
+      </div>
+      }
     </div>
+    @if (conversation().lastMessage) {
+    <div class="last-message">
+      {{ lastMessagePreview() }}
+    </div>
+    }
   </div>
 </button>

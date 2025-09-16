@@ -13,5 +13,3 @@ export interface MessageResponse {
   content: string;
   sentAt: string;
 }
-
-

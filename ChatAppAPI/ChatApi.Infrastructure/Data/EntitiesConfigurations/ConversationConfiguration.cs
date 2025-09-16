@@ -6,7 +6,7 @@ namespace ChatApi.Infrastructure.Data.EntitiesConfigurations {
     public class ConversationConfiguration : IEntityTypeConfiguration<Conversation> {
         public void Configure(EntityTypeBuilder<Conversation> builder) {
             builder.HasKey(c => c.Id);
-            
+
             builder.Property(c => c.Title)
                 .HasMaxLength(100);
 
@@ -15,9 +15,6 @@ namespace ChatApi.Infrastructure.Data.EntitiesConfigurations {
                 .IsRequired();
 
             builder.Property(c => c.CreatedAt)
-                .IsRequired();
-
-            builder.Property(c => c.LastMessageAt)
                 .IsRequired();
 
             builder.Property(c => c.IsActive)

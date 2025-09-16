@@ -6,7 +6,8 @@ import { Subject, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ConversationType } from '../../../enums/conversation-type';
 import { AuthenticationService } from '../../../services/authentication.service';
-import { Component, DestroyRef, effect, Input, input, output } from '@angular/core';
+import { Component, DestroyRef, effect, Input, input, output, computed } from '@angular/core';
+import { MessageResponse } from '../../../models/conversations/responses/conversation-messages-response';
 
 
 @Component({
@@ -20,15 +21,14 @@ export class ConversationListComponent {
 
   conversations = input.required<UserConversation[]>();
   @Input({ required: true }) others!: UserConversation[];
+  selectedConversation = input<UserConversation | null>(null);
+
   conversationSelected = output<UserConversation>();
   searchChanged = output<string>();
   filteredConversations: UserConversation[] = [];
-  // selectedConversation: UserConversation | null = null;
-  selectedConversation = input<UserConversation | null>(null);
 
   searchValue: string = '';
   error: string | null = null;
-
 
   private searchSubject = new Subject();
 
@@ -47,7 +47,7 @@ export class ConversationListComponent {
   }
 
   onSelectConversation(conversation: UserConversation) {
-    // this.selectedConversation = conversation;
+    console
     this.conversationSelected.emit(conversation);
   }
 
@@ -58,9 +58,6 @@ export class ConversationListComponent {
   }
 
   private filterConversations() {
-    // 3andk mo4kla hya enk t5ly el filter fe el parent a7sn
-
-
     if (!this.searchValue) {
       this.filteredConversations = [...this.conversations()];
       this.others = [];
@@ -81,20 +78,16 @@ export class ConversationListComponent {
     );
 
 
-    if (!directConverationByUserName) {
+    if (!directConverationByUserName)
       this.searchChanged.emit(this.searchValue);
-    }
+
   }
 
-  isSelected(conversation: UserConversation): boolean {
-    if (this.selectedConversation()?.id)
-      return this.selectedConversation()!.id === conversation.id;
-
-    if (this.selectedConversation)
-      return this.selectedConversation() === conversation;
-
-    return false;
-  }
-
+  isSelectedConversation = computed(() => {
+    return (conv: UserConversation) => {
+      const selected = this.selectedConversation();
+      return selected?.id ? selected?.id === conv.id : selected === conv;
+    };
+  });
 }
 

@@ -1,5 +1,4 @@
 using AutoMapper;
-using ChatApi.Core.DTOs.Chat;
 using ChatApi.Core.Entities.ChatEntities;
 using ChatApi.Core.Features.Chat.Commands.RequestsModels;
 using ChatApi.Core.Features.Chat.Commands.Responses;
@@ -20,22 +19,6 @@ namespace ChatApi.Core.Mapping.Chat {
                 .ForMember(dest => dest.SenderFullName, opt => opt.MapFrom(src => src.Sender != null ? src.Sender.FullName : ""));
 
 
-            // Entity to DTO mappings (for backward compatibility)
-            CreateMap<Conversation, ConversationDto>()
-                .ForMember(dest => dest.CreatedByUserName, opt => opt.MapFrom(src => src.CreatedBy != null ? src.CreatedBy.UserName : ""))
-                .ForMember(dest => dest.UnreadCount, opt => opt.Ignore())
-                .ForMember(dest => dest.LastMessage, opt => opt.Ignore());
-
-            CreateMap<ConversationParticipant, ConversationParticipantDto>()
-                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName))
-                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User.FullName))
-                .ForMember(dest => dest.IsOnline, opt => opt.MapFrom(src => src.User.IsOnline));
-
-            CreateMap<Message, MessageDto>()
-                .ForMember(dest => dest.SenderName, opt => opt.MapFrom(src => src.Sender.UserName));
-
-            CreateMap<TypingIndicator, TypingIndicatorDto>()
-                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName));
 
             // Entity to Query Response mappings
             CreateMap<Conversation, GetUserConversationsResponse>();

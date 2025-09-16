@@ -23,6 +23,7 @@ namespace ChatApi.Core.Abstracts.ServicesContracts {
         Task<Conversation?> GetDirectConversationBetweenUsersAsync(int userId1, int userId2);
         Task<bool> HasDirectConversationWith(int user1Id, int user2Id);
         Task<string> GetConversationTitle(int convesationId);
+        Task<Message?> GetLastMessageInConversationAsync(int conversationId);
 
     }
 }

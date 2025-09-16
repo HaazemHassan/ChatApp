@@ -7,6 +7,7 @@ using ChatApi.Core.Enums;
 using ChatApi.Core.Enums.ChatEnums;
 using ChatApi.Core.Features.Chat.Commands.RequestsModels;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChatApi.Services.Services {
     public class ChatService : IChatService {
@@ -34,19 +35,6 @@ namespace ChatApi.Services.Services {
             _currentUserService = currentUserService;
             _applicationUserService = applicationUserService;
         }
-
-        //public async Task<ServiceOperationResult> CreateConversationAsync(Conversation conversation) {
-        //    if (conversation.Type == ConversationType.Direct)
-        //        conversation.Title = null;
-        //    try {
-
-        //        await _conversationRepository.AddAsync(conversation);
-        //        return ServiceOperationResult.Succeeded;
-        //    }
-        //    catch {
-        //        return ServiceOperationResult.Failed;
-        //    }
-        //}
 
 
         public async Task<ServiceOperationResult<Conversation?>> CreateConversationAsync(CreateConversationCommand request) {
@@ -285,6 +273,14 @@ namespace ChatApi.Services.Services {
             catch {
                 return false;
             }
+        }
+
+
+        public async Task<Message?> GetLastMessageInConversationAsync(int conversationId) {
+            return await _messageRepository.GetTableNoTracking()
+                .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
+                .OrderByDescending(m => m.SentAt)
+                .FirstOrDefaultAsync();
         }
 
 

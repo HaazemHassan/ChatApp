@@ -77,7 +77,11 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   }
 
   formatMessageTime(sentAt: string): string {
-    const date = new Date(sentAt);
+    const utcDate = new Date(sentAt);
+
+    const date = sentAt.endsWith('Z')
+      ? utcDate
+      : new Date(sentAt + 'Z');
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
@@ -102,7 +106,6 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
     };
 
     this.chatHubService.sendMessage(request).then(() => {
-      console.log('Message sent successfully via SignalR');
 
     }).catch((err) => {
       console.error('Error sending message via SignalR:', err);
