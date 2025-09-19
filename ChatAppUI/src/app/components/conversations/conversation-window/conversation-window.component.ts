@@ -23,13 +23,14 @@ import {
   ConversationMessagesResponse,
 } from '../../../models/conversations/responses/conversation-messages-response';
 import { FormatMessageTimePipe } from "../../../pipes/format-message-time.pipe";
+import { StringInitialsPipe } from "../../../pipes/string-initials.pipe";
 
 
 
 @Component({
   selector: 'app-conversation-window',
   standalone: true,
-  imports: [CommonModule, FormsModule, FormatMessageTimePipe],
+  imports: [CommonModule, FormsModule, FormatMessageTimePipe, StringInitialsPipe],
   templateUrl: './conversation-window.component.html',
   styleUrl: './conversation-window.component.css',
 })
@@ -147,6 +148,5 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
       console.error('Error scrolling to bottom:', err);
     }
   }
-
 
 }

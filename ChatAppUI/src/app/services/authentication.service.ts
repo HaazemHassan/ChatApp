@@ -1,3 +1,4 @@
+import { ChatHubService } from './chat-hub.service';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, OnInit } from '@angular/core';
 import { ApiResponse } from '../models/api-response';
@@ -15,8 +16,12 @@ import { User } from '../models/interfaces/userInterface';
 export class AuthenticationService {
   currentUser: User | null = null;
 
-  constructor(private httpClient: HttpClient) {
+  constructor(private httpClient: HttpClient, private chatHubService: ChatHubService) {
     this.currentUser = this.getCurrentUser();
+
+    if (this.isAuthenticated()) {
+      this.chatHubService.startConnection(this.getAccessToken());
+    }
   }
 
   ngOnInit(): void { }
@@ -34,10 +39,14 @@ export class AuthenticationService {
             if (response.data.refreshToken) {
               document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
             }
+            console.log('Logged in user:', response.data.user.userName);
             localStorage.setItem(
               'currentUser',
               JSON.stringify(response.data.user)
             );
+            if (this.isAuthenticated()) {
+              this.chatHubService.startConnection(this.getAccessToken());
+            }
           }
 
           return response;
@@ -78,6 +87,7 @@ export class AuthenticationService {
   }
 
   logout(): Observable<ApiResponse<void>> {
+    this.chatHubService.stopConnection();
     return this.httpClient
       .post<ApiResponse<void>>(
         `${environment.apiUrl}/authentication/logout`,

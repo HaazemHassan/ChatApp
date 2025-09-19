@@ -4,6 +4,7 @@ import { TimeAgoPipe } from "../../../pipes/time-ago.pipe";
 import { AsyncPipe } from '@angular/common';
 import { StringInitialsPipe } from "../../../pipes/string-initials.pipe";
 import { MessageResponse } from '../../../models/conversations/responses/conversation-messages-response';
+import { ConversationType } from '../../../enums/conversation-type';
 
 @Component({
   selector: 'app-conversation-item',
@@ -16,8 +17,7 @@ export class ConversationItemComponent {
   conversation = input.required<UserConversation>();
   isSelected = input<boolean>(false);
   selectedConversation = output<UserConversation>();
-  // newMessage = input<MessageResponse | null>(null);
-
+  ConversationType = ConversationType;
 
   onSelect() {
     if (this.conversation())

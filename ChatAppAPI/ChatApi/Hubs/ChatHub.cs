@@ -84,7 +84,7 @@ namespace ChatApi.Hubs {
                             await Groups.AddToGroupAsync(connectionId, $"Conversation_{conversationData.Id}");
                     }
                     if (type == ConversationType.Group)
-                        await Clients.Group($"Conversation_{conversationData.Id}").SendAsync("NewConversationCreated", conversationData);
+                        await Clients.Group($"Conversation_{conversationData.Id}").SendAsync("NewGroupCreated", conversationData);
                     else
                         await Clients.Caller.SendAsync("NewDirectConversationInfo", conversationData);
 

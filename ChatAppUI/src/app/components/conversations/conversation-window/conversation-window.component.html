@@ -29,6 +29,18 @@
         [class.current-user]="message.senderId === this.currentUserId"
         [class.other-user]="message.senderId !== this.currentUserId"
       >
+        <!-- Sender Avatar and Info for Other Users -->
+        @if (message.senderId !== this.currentUserId) {
+        <div class="sender-info">
+          <div class="sender-avatar">
+            {{ message.senderFullName | stringInitials }}
+          </div>
+          <div class="sender-details">
+            <div class="sender-name">{{ message.senderName }}</div>
+          </div>
+        </div>
+        }
+
         <div class="message-bubble">
           <div class="message-content">{{ message.content }}</div>
           <div class="message-meta">

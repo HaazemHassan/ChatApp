@@ -1,6 +1,7 @@
 ﻿using ChatApi.Bases;
 using ChatApi.Core.Features.Users.Queries.Models;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatApi.Controllers {
@@ -24,6 +25,13 @@ namespace ChatApi.Controllers {
 
         [HttpGet("{Username}")]
         public async Task<IActionResult> GetByUsername([FromRoute] GetUserByUsernameQuery query) {
+            var result = await mediator.Send(query);
+            return NewResult(result);
+        }
+
+        [Authorize]
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchUsers([FromQuery] SearchUsersQuery query) {
             var result = await mediator.Send(query);
             return NewResult(result);
         }

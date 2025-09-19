@@ -11,6 +11,6 @@ namespace ChatApi.Core.Abstracts.ServicesContracts {
         public Task<ServiceOperationStatus> ResetPasswordAsync(ApplicationUser user, string newPassword);
         public Task<string?> GetFullName(int userId);
         public Task<ApplicationUser?> GetByUsernameAsync(string username);
-
+        public Task<List<ApplicationUser>> SearchUsersByUsernameAsync(string username);
     }
 }

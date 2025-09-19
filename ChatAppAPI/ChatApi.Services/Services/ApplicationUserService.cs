@@ -139,5 +139,20 @@ namespace ChatApi.Services.Services {
         public async Task<ApplicationUser?> GetByUsernameAsync(string username) {
             return await _userManager.FindByNameAsync(username);
         }
+
+        public async Task<List<ApplicationUser>> SearchUsersByUsernameAsync(string username) {
+            try {
+                var users = await _userManager.Users
+                    .Where(u => u.UserName.Contains(username))
+                    .OrderBy(u => u.UserName)
+                    .Take(10)
+                    .ToListAsync();
+
+                return users;
+            }
+            catch (Exception) {
+                return new List<ApplicationUser>();
+            }
+        }
     }
 }

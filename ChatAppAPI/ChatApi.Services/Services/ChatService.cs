@@ -48,6 +48,10 @@ namespace ChatApi.Services.Services {
                 return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.Forbidden, "Creator must be a participant in the conversation");
 
             if (request.Type == ConversationType.Direct) {
+
+                if (request.Title is not null)
+                    return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.InvalidParameters, "Direct conversations cannot have a title");
+
                 if (request.ParticipantIds.Count != 2)
                     return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.InvalidParameters, "Direct conversations must have exactly two participants");
                 int firstUserId = request.ParticipantIds.FirstOrDefault();
@@ -58,6 +62,11 @@ namespace ChatApi.Services.Services {
                 var existingConversation = await GetDirectConversationBetweenUsersAsync(firstUserId, secondUserId);
                 if (existingConversation != null)
                     return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.AlreadyExists, "Direct conversation already exists");
+            }
+            else {
+                if (string.IsNullOrWhiteSpace(request.Title))
+                    return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.InvalidParameters, "Group conversations must have a title");
+
             }
 
             var conversation = new Conversation {

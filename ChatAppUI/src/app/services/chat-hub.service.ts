@@ -12,25 +12,29 @@ import { SendMessageRequest } from '../models/conversations/requests/send-messag
 })
 export class ChatHubService {
   private hubConnection!: signalR.HubConnection;
+  private isStarted = false;
 
-  constructor(private authService: AuthenticationService) { }
-
-
-  startConnection() {
-    const token = this.authService.getAccessToken();
+  startConnection(accessToken: string | null) {
+    if (this.isStarted) return;
+    const token = accessToken;
     if (token === null) {
       console.error('No access token found. User might not be authenticated.');
       return;
     }
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl('https://localhost:44318/chatHub', {
-        accessTokenFactory: () => token
+        accessTokenFactory: () => token!
       })
       .withAutomaticReconnect()
       .build();
 
-    return this.hubConnection.start();
+    return this.hubConnection.start().then(() => {
+      this.isStarted = true;
+      console.log('SignalR connection started.');
+    });
   }
+
+
 
   stopConnection() {
     return this.hubConnection?.stop();
@@ -41,7 +45,7 @@ export class ChatHubService {
   }
 
   onNewConversation(callback: (conversation: UserConversation) => void) {
-    this.hubConnection.on('NewConversationCreated', callback);
+    this.hubConnection.on('NewGroupCreated', callback);
   }
 
   onNewDirectConversationInfo(callback: (conversation: UserConversation) => void) {
@@ -59,7 +63,7 @@ export class ChatHubService {
     );
   }
 
-  createConversation(participantIds: number[], title: string, type: ConversationType) {
+  createConversation(participantIds: number[], title: string | null, type: ConversationType) {
     return this.hubConnection.invoke(
       'CreateConversation',
       participantIds,

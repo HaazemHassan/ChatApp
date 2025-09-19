@@ -7,6 +7,7 @@ namespace ChatApi.Core.Mapping.Users {
             //GetUsersPaginatedMapping();
             GetUserByIdMapping();
             GetUserByUsernameMapping();
+            SearchUsersMapping();
             //UpdateUserMapping();
         }
     }

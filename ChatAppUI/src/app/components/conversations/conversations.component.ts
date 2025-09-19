@@ -24,7 +24,7 @@ import { User } from '../../models/interfaces/userInterface';
   templateUrl: './conversations.component.html',
   styleUrl: './conversations.component.css',
 })
-export class ConversationsComponent implements OnInit, OnDestroy {
+export class ConversationsComponent implements OnInit {
 
   selectedConversation: UserConversation | null = null;
   conversations: UserConversation[] = [];
@@ -47,29 +47,19 @@ export class ConversationsComponent implements OnInit, OnDestroy {
       },
     });
 
-    this.chatHubService.startConnection()?.then(() => {
-      this.chatHubService.onNewConversation((newConversation: UserConversation) => {
-        this.handleNewConversationReceived(newConversation);
-      });
 
-      this.chatHubService.onNewDirectConversationInfo((newConversation: UserConversation) => {
-        this.handleNewDirectConversationInfoReceived(newConversation);
-      });
-
-      this.chatHubService.onReceiveMessage((message: MessageResponse) => {
-        this.handleMessageReceived(message);
-      });
-
-    }).catch(err => {
-      console.error('Error starting SignalR connection:', err);
+    this.chatHubService.onNewConversation((newConversation: UserConversation) => {
+      this.handleNewConversationReceived(newConversation);
     });
-  }
 
-  ngOnDestroy(): void {
-    this.chatHubService.stopConnection()?.then(() => {
-    }).catch(err => {
-      console.error('Error stopping SignalR connection:', err);
+    this.chatHubService.onNewDirectConversationInfo((newConversation: UserConversation) => {
+      this.handleNewDirectConversationInfoReceived(newConversation);
     });
+
+    this.chatHubService.onReceiveMessage((message: MessageResponse) => {
+      this.handleMessageReceived(message);
+    });
+
   }
 
 
@@ -139,10 +129,11 @@ export class ConversationsComponent implements OnInit, OnDestroy {
 
 
   onConversationSelected(conversation: UserConversation) {
+    console.log('Conversation selected:', conversation);
     if (!conversation.id) {
       this.chatHubService.createConversation(
         conversation.participants.map(p => p.userId),
-        conversation.title,
+        null,
         conversation.type
       ).then(() => {
       }).catch(err => {

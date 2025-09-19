@@ -12,6 +12,15 @@
         Home
       </a>
 
+      @if (isAuthenticated()) {
+      <a routerLink="/conversations" routerLinkActive="active" class="nav-link">
+        Conversations
+      </a>
+      <a routerLink="/create-group" routerLinkActive="active" class="nav-link">
+        Create Group
+      </a>
+      }
+
       <div class="auth-buttons">
         @if (!isAuthenticated()) {
         <a routerLink="/login" routerLinkActive="active" class="nav-link">

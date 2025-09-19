@@ -1,0 +1,109 @@
+<div class="testcreate-container">
+  <div class="card">
+    <div class="card-header">
+      <h2>New Group</h2>
+    </div>
+
+    <div class="card-body">
+      <!-- Group Name Section -->
+      <div class="form-group">
+        <label for="groupName">Group Name</label>
+        <input
+          type="text"
+          id="groupName"
+          class="form-control"
+          [(ngModel)]="groupName"
+          placeholder="Enter group name"
+          required
+        />
+      </div>
+
+      <!-- User Search Section -->
+      <div class="form-group">
+        <label for="userSearch">Search Users</label>
+        <div class="search-container">
+          <input
+            type="text"
+            id="userSearch"
+            class="form-control"
+            [(ngModel)]="searchValue"
+            (input)="onSearchInput($event)"
+            placeholder="Search users"
+            autocomplete="off"
+          />
+
+          <!-- Loading indicator -->
+          @if (isSearching) {
+          <div class="search-loading">
+            <span class="spinner"></span>
+          </div>
+          }
+        </div>
+
+        <!-- Search Results -->
+        @if (searchResults.length > 0) {
+        <div class="search-results">
+          @for (user of searchResults; track user.id) {
+          <div class="search-result-item" (click)="addUser(user)">
+            <div class="user-avatar">
+              {{ user.fullName | stringInitials }}
+            </div>
+            <div class="user-info">
+              <span class="fullname">{{ user.fullName }}</span>
+              <span class="user-email">{{ "@" + user.userName }}</span>
+            </div>
+            <button class="btn btn-add" type="button">Add</button>
+          </div>
+          }
+        </div>
+        }
+
+        <!-- No results message -->
+        @if (searchValue.trim() && searchResults.length === 0 && !isSearching) {
+        <div class="no-results">No results found for "{{ searchValue }}"</div>
+        }
+      </div>
+
+      <!-- Selected Users Section -->
+      @if (selectedUsers.length > 0) {
+      <div class="form-group">
+        <label>Selected Users ({{ selectedUsers.length }})</label>
+        <div class="selected-users">
+          @for (user of selectedUsers; track user.id) {
+          <div class="selected-user-item">
+            <div class="user-avatar">
+              {{ user.userName | stringInitials }}
+            </div>
+            <div class="user-info">
+              <span class="fullname">{{ user.fullName }}</span>
+              <span class="user-email">{{ "@" + user.userName }}</span>
+            </div>
+            <button
+              class="btn btn-remove"
+              type="button"
+              (click)="removeUser(user)"
+              title="Remove User"
+            >
+              ×
+            </button>
+          </div>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button
+          class="btn btn-primary btn-create"
+          (click)="createGroup()"
+          [disabled]="!groupName.trim() || selectedUsers.length === 0"
+        >
+          Create
+        </button>
+
+        <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>

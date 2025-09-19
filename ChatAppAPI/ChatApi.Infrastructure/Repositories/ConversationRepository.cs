@@ -9,11 +9,13 @@ namespace ChatApi.Infrastructure.Repositories {
         public ConversationRepository(AppDbContext dbContext) : base(dbContext) { }
 
         public async Task<IEnumerable<Conversation>> GetUserConversationsAsync(int userId) {
-            return await _dbContext.Conversations.Where(c => c.IsActive && c.Messages.Any())
+            return await _dbContext.Conversations.Where(c => c.IsActive && ((c.Type == ConversationType.Direct && c.LastMessageAt != null)) || c.Type == ConversationType.Group)
                 .Where(c => c.Participants.Any(p => p.IsActive && p.UserId == userId))
                 .Include(c => c.Participants)
                     .ThenInclude(p => p.User)
-                .OrderByDescending(c => c.LastMessageAt)
+                .OrderByDescending(c => c.LastMessageAt != null && c.LastMessageAt > c.CreatedAt
+                                ? c.LastMessageAt
+                                : c.CreatedAt)
                 .ToListAsync();
         }
 
