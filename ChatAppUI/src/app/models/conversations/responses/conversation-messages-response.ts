@@ -1,3 +1,5 @@
+import { MessageType } from "../../../enums/message-type";
+
 export interface ConversationMessagesResponse {
   conversationId: number;
   conversationTitle?: string;
@@ -12,4 +14,6 @@ export interface MessageResponse {
   senderFullName: string;
   content: string;
   sentAt: string;
+  messageType: MessageType;
+
 }

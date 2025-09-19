@@ -26,11 +26,19 @@
       @for (message of messages; track message.id) {
       <div
         class="message-wrapper"
-        [class.current-user]="message.senderId === this.currentUserId"
-        [class.other-user]="message.senderId !== this.currentUserId"
+        [class.current-user]="
+          message.senderId === this.currentUserId &&
+          message.messageType !== MessageType.System
+        "
+        [class.other-user]="
+          message.senderId !== this.currentUserId &&
+          message.messageType !== MessageType.System
+        "
+        [class.system-message]="message.messageType === MessageType.System"
       >
         <!-- Sender Avatar and Info for Other Users -->
-        @if (message.senderId !== this.currentUserId) {
+        @if (message.senderId !== this.currentUserId && message.messageType !==
+        MessageType.System) {
         <div class="sender-info">
           <div class="sender-avatar">
             {{ message.senderFullName | stringInitials }}
@@ -44,12 +52,14 @@
         <div class="message-bubble">
           <div class="message-content">{{ message.content }}</div>
           <div class="message-meta">
-            @if (message.senderId === this.currentUserId) {
+            @if (message.senderId === this.currentUserId && message.messageType
+            !== MessageType.System) {
             <span class="sender-name"> You </span>
-            }
+            } @if (message.messageType !== MessageType.System) {
             <span class="message-time">{{
               message.sentAt | formatMessageTime
             }}</span>
+            }
           </div>
         </div>
       </div>

@@ -24,6 +24,7 @@ import {
 } from '../../../models/conversations/responses/conversation-messages-response';
 import { FormatMessageTimePipe } from "../../../pipes/format-message-time.pipe";
 import { StringInitialsPipe } from "../../../pipes/string-initials.pipe";
+import { MessageType } from "../../../enums/message-type";
 
 
 
@@ -40,6 +41,9 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   error: string | null = null;
   private shouldScrollToBottom = false;
   currentUserId: number | null = null;
+
+  // Make MessageType available in template
+  MessageType = MessageType;
 
   conversation = input.required<UserConversation>();
   newMessage = input<MessageResponse | null>(null);

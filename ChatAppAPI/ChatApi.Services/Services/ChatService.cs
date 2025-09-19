@@ -90,6 +90,10 @@ namespace ChatApi.Services.Services {
 
         public async Task<ServiceOperationStatus> AddParticipantAsync(int conversationId, int userId, ConversationParticipantRole role) {
             try {
+                var conversation = await GetConversationByIdAsync(conversationId);
+                if (conversation == null)
+                    return ServiceOperationStatus.DependencyNotExist;
+
                 var existingParticipant = await _participantRepository.GetParticipantAsync(conversationId, userId);
                 if (existingParticipant != null) {
                     if (existingParticipant.IsActive)
@@ -111,6 +115,21 @@ namespace ChatApi.Services.Services {
                 };
 
                 await _participantRepository.AddAsync(participant);
+
+                //Add system messages to the group chat about the new participant
+
+                if (conversation.Type == ConversationType.Group && role != ConversationParticipantRole.Owner) {
+
+                    var user = await _userManager.FindByIdAsync(userId.ToString());
+                    var systemMessage = new Message {
+                        Content = $"@{user?.UserName} was added to the group.",
+                        ConversationId = conversationId,
+                        MessageType = MessageType.System,
+                    };
+                    await SendMessageAsync(systemMessage);
+                }
+
+
                 return ServiceOperationStatus.Succeeded;
             }
             catch {

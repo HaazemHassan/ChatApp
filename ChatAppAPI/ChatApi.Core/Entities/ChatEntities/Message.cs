@@ -11,8 +11,7 @@ namespace ChatApi.Core.Entities.ChatEntities {
         [Required]
         public int ConversationId { get; set; }
 
-        [Required]
-        public int SenderId { get; set; }
+        public int? SenderId { get; set; }
 
         [Required]
         public string Content { get; set; }
@@ -31,7 +30,7 @@ namespace ChatApi.Core.Entities.ChatEntities {
         public virtual Conversation Conversation { get; set; }
 
         [ForeignKey(nameof(SenderId))]
-        public virtual ApplicationUser Sender { get; set; }
+        public virtual ApplicationUser? Sender { get; set; }
 
         [ForeignKey(nameof(ReplyToMessageId))]
         public virtual Message? ReplyToMessage { get; set; }

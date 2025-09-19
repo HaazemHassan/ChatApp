@@ -25,7 +25,6 @@ namespace ChatApi {
                             .ConfigureServices(builder.Configuration);
 
 
-            //used in ApplicationUserService/SendConfirmationEmail method
 
 
             var myOrigin = "AngularChatApp";

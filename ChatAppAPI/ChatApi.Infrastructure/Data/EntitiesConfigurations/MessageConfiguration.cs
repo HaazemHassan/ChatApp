@@ -25,7 +25,8 @@ namespace ChatApi.Infrastructure.Data.EntitiesConfigurations {
             builder.HasOne(m => m.Sender)
                 .WithMany(u => u.SentMessages)
                 .HasForeignKey(m => m.SenderId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
 
             builder.HasOne(m => m.ReplyToMessage)
                 .WithMany(m => m.Replies)

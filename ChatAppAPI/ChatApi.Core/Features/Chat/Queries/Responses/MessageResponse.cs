@@ -1,3 +1,5 @@
+using ChatApi.Core.Enums.ChatEnums;
+
 namespace ChatApi.Core.Features.Chat.Queries.Responses {
     public class MessageResponse {
         public int Id { get; set; }
@@ -7,7 +9,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Responses {
         public string SenderFullName { get; set; }
         public string Content { get; set; }
         public DateTime SentAt { get; set; }
-        //public MessageType MessageType { get; set; }
+        public MessageType MessageType { get; set; }
 
         //public DateTime? EditedAt { get; set; }
         //public bool IsDeleted { get; set; }
