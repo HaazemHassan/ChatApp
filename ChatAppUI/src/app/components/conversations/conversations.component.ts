@@ -60,6 +60,9 @@ export class ConversationsComponent implements OnInit {
       this.handleMessageReceived(message);
     });
 
+    this.chatHubService.onUserOnlineStatusChanged((userId: number, isOnline: boolean) => {
+      this.handleUserOnlineStatusChange(userId, isOnline);
+    });
   }
 
 
@@ -110,6 +113,29 @@ export class ConversationsComponent implements OnInit {
           console.error('Error fetching conversation for new message:', error);
         }
       });
+    }
+  }
+
+  handleUserOnlineStatusChange(userId: number, isOnline: boolean) {
+    const conversation = this.conversationsService.getDirectConversationWithUser(this.conversations, userId);
+    if (conversation) {
+      const otherParticipant = this.conversationsService.getOtherParticipantInDirectConversation(conversation.participants);
+      if (otherParticipant) {
+        // Create new objects to trigger change detection
+        const updatedParticipant = { ...otherParticipant, isOnline: isOnline };
+        const updatedParticipants = conversation.participants.map(p =>
+          p.userId === userId ? updatedParticipant : p
+        );
+        const updatedConversation = { ...conversation, participants: updatedParticipants };
+
+        this.conversations = this.conversations.map(conv =>
+          conv.id === updatedConversation.id ? updatedConversation : conv
+        );
+
+        if (this.selectedConversation && this.selectedConversation.id === updatedConversation.id) {
+          this.selectedConversation = updatedConversation;
+        }
+      }
     }
   }
 

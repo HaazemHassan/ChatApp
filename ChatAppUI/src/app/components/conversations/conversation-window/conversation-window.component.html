@@ -2,6 +2,9 @@
   <!-- Header -->
   <div class="conversation-header">
     <h2 class="conversation-title">{{ conversation().title }}</h2>
+    @if (conversation().type === ConversationType.Direct && isOnline()) {
+    <div class="online-status-header">online</div>
+    }
   </div>
 
   <!-- Messages Container -->

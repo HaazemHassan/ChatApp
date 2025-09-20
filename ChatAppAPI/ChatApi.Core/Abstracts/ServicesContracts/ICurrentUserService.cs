@@ -6,5 +6,6 @@ namespace ChatApi.Core.Abstracts.ServicesContracts {
         string? UserName { get; }
         bool IsAuthenticated { get; }
         Task<ApplicationUser?> GetCurrentUserAsync();
+        Task<bool> IsOnline();
     }
 }

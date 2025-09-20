@@ -133,13 +133,15 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
                             Id = null,
                             UserId = currentUser.Id,
                             UserName = currentUser.UserName,
-                            FullName = currentUser.FullName
+                            FullName = currentUser.FullName,
+                            IsOnline = currentUser.IsOnline
                         },
                         new ConversationParticipantResponse {
                             Id = null,
                             UserId = otherUser.Id,
                             UserName = otherUser.UserName,
-                            FullName = otherUser.FullName
+                            FullName = otherUser.FullName,
+                            IsOnline = otherUser.IsOnline
                         }
                     }
                 };
@@ -150,6 +152,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
 
     }
 }
+
 
 
 

@@ -12,6 +12,7 @@ import {
   input,
   effect,
   output,
+  computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -25,6 +26,7 @@ import {
 import { FormatMessageTimePipe } from "../../../pipes/format-message-time.pipe";
 import { StringInitialsPipe } from "../../../pipes/string-initials.pipe";
 import { MessageType } from "../../../enums/message-type";
+import { ConversationType } from '../../../enums/conversation-type';
 
 
 
@@ -44,6 +46,9 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
 
   // Make MessageType available in template
   MessageType = MessageType;
+
+  // Make ConversationType available in template
+  ConversationType = ConversationType;
 
   conversation = input.required<UserConversation>();
   newMessage = input<MessageResponse | null>(null);
@@ -134,6 +139,14 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
       this.messageText = originalText;
     });
   }
+
+  isOnline = computed(() => {
+    if (this.conversation().type === ConversationType.Direct)
+      return this.conversationsService.IsOtherParticipantOnline(this.conversation().participants);
+    return null;   // For group conversations, online status is not applicable
+  });
+
+
 
   //helpers
   private scrollToBottom(smooth: boolean = false): void {

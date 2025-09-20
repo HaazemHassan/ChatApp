@@ -6,6 +6,7 @@ export interface Participant {
   userId: number;
   userName: string;
   fullName: string;
+  isOnline: boolean;
 }
 
 export interface UserConversation {

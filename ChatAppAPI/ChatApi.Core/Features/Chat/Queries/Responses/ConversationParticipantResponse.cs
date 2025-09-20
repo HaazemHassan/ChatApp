@@ -7,7 +7,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Responses {
         //public ConversationParticipantRole Role { get; set; }
         //public DateTime JoinedAt { get; set; }
         //public DateTime? LastReadAt { get; set; }
-        //public bool IsOnline { get; set; }
+        public bool IsOnline { get; set; }
         //public int? LastReadMessageId { get; set; }
     }
 }

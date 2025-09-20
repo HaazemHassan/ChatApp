@@ -2,9 +2,10 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable, catchError } from 'rxjs';
 import { ApiResponse } from '../models/api-response';
-import { UserConversation } from '../models/conversations/responses/user-conversations-response';
+import { Participant, UserConversation } from '../models/conversations/responses/user-conversations-response';
 import { environment } from '../../environments/environment';
 import { ConversationMessagesResponse, MessageResponse } from '../models/conversations/responses/conversation-messages-response';
+import { AuthenticationService } from './authentication.service';
 
 
 @Injectable({
@@ -12,7 +13,7 @@ import { ConversationMessagesResponse, MessageResponse } from '../models/convers
 })
 export class ConversationsService {
   apiUrl: string = environment.apiUrl;
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private authService: AuthenticationService) { }
 
   getUserConversations(): Observable<UserConversation[]> {
     return this.http
@@ -68,5 +69,24 @@ export class ConversationsService {
           throw error;
         })
       );
+  }
+
+
+  // For direct conversations
+  getOtherParticipantInDirectConversation(participants: Participant[]): Participant | null {
+    const curUserId = this.authService.getCurrentUserId();
+    return participants.find(p => p.userId !== curUserId) || null;
+
+  }
+
+  IsOtherParticipantOnline(participants: Participant[]): boolean {
+    const otherParticipant = this.getOtherParticipantInDirectConversation(participants);
+    return otherParticipant ? otherParticipant.isOnline : false;
+  }
+
+  getDirectConversationWithUser(conversations: UserConversation[], userId: number): UserConversation | null {
+    return conversations.find(conv =>
+      conv.participants.some(p => p.userId === userId)
+    ) || null;
   }
 }

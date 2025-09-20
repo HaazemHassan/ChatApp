@@ -34,14 +34,18 @@ export class ChatHubService {
     });
   }
 
-
-
   stopConnection() {
+    this.isStarted = false;
     return this.hubConnection?.stop();
   }
 
-  onReceiveMessage(callback: (message: MessageResponse) => void) {
-    this.hubConnection.on('ReceiveMessage', callback);
+  createConversation(participantIds: number[], title: string | null, type: ConversationType) {
+    return this.hubConnection.invoke(
+      'CreateConversation',
+      participantIds,
+      title,
+      type
+    );
   }
 
   onNewConversation(callback: (conversation: UserConversation) => void) {
@@ -52,10 +56,6 @@ export class ChatHubService {
     this.hubConnection.on('NewDirectConversationInfo', callback);
   }
 
-  onError(callback: (error: any) => void) {
-    this.hubConnection.on('Error', callback);
-  }
-
   sendMessage(request: SendMessageRequest) {
     return this.hubConnection.invoke(
       'SendMessage',
@@ -63,12 +63,17 @@ export class ChatHubService {
     );
   }
 
-  createConversation(participantIds: number[], title: string | null, type: ConversationType) {
-    return this.hubConnection.invoke(
-      'CreateConversation',
-      participantIds,
-      title,
-      type
-    );
+  onReceiveMessage(callback: (message: MessageResponse) => void) {
+    this.hubConnection.on('ReceiveMessage', callback);
+  }
+
+  onUserOnlineStatusChanged(callback: (userId: number, isOnline: boolean) => void) {
+    this.hubConnection.on('UserOnlineStatusChanged', callback);
+  }
+
+
+
+  onError(callback: (error: any) => void) {
+    this.hubConnection.on('Error', callback);
   }
 }

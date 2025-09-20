@@ -33,5 +33,10 @@ namespace ChatApi.Services.Services {
 
             return await _userManager.GetUserAsync(principal);
         }
+
+        public async Task<bool> IsOnline() {
+            var currentUser = await GetCurrentUserAsync();
+            return currentUser != null && currentUser.IsOnline;
+        }
     }
 }

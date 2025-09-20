@@ -20,6 +20,12 @@
   color: #111827;
 }
 
+.online-status-header {
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: #10b981;
+}
+
 .messages-container {
   display: flex;
   flex-direction: column;

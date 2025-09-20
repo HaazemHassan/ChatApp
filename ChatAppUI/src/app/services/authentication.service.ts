@@ -39,7 +39,6 @@ export class AuthenticationService {
             if (response.data.refreshToken) {
               document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
             }
-            console.log('Logged in user:', response.data.user.userName);
             localStorage.setItem(
               'currentUser',
               JSON.stringify(response.data.user)

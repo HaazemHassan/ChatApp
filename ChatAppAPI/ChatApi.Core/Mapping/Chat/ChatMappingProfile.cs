@@ -21,7 +21,9 @@ namespace ChatApi.Core.Mapping.Chat {
 
 
             // Entity to Query Response mappings
-            CreateMap<Conversation, GetUserConversationsResponse>();
+            CreateMap<Conversation, GetUserConversationsResponse>()
+                .ForMember(dest => dest.IsOnline, opt => opt.MapFrom(src => 
+                    src.Participants.Any(p => p.User.IsOnline)));
             //.ForMember(dest => dest.CreatedByUserName, opt => opt.MapFrom(src => src.CreatedBy != null ? src.CreatedBy.UserName : ""))
             //.ForMember(dest => dest.UnreadCount, opt => opt.Ignore())
             //.ForMember(dest => dest.LastMessage, opt => opt.Ignore());
@@ -32,8 +34,8 @@ namespace ChatApi.Core.Mapping.Chat {
 
             CreateMap<ConversationParticipant, ConversationParticipantResponse>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName))
-                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User.FullName));
-            //.ForMember(dest => dest.IsOnline, opt => opt.MapFrom(src => src.User.IsOnline));
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User.FullName))
+                .ForMember(dest => dest.IsOnline, opt => opt.MapFrom(src => src.User.IsOnline));
 
             CreateMap<Conversation, GetNewConversationResponse>();
 

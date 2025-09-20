@@ -5,7 +5,6 @@ using ChatApi.Core.Features.Chat.Queries.RequestsModels;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using System.Security.Claims;
 
 namespace ChatApi.Hubs {
 
@@ -14,41 +13,56 @@ namespace ChatApi.Hubs {
         private readonly IConnectionService _connectionService;
         private readonly IMediator _mediator;
         private readonly IChatService _chatService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public ChatHub(IConnectionService connectionService, IMediator mediator, IChatService chatService) {
+        public ChatHub(IConnectionService connectionService, IMediator mediator, IChatService chatService, ICurrentUserService currentUserService) {
             _connectionService = connectionService;
             _mediator = mediator;
             _chatService = chatService;
+            _currentUserService = currentUserService;
         }
 
         #region Connection Management
         public override async Task OnConnectedAsync() {
-            Console.WriteLine("User Connected: " + Context.UserIdentifier);
-            var userId = GetCurrentUserId();
-            if (userId > 0) {
-                await _connectionService.AddUserConnectionAsync(userId, Context.ConnectionId);
-                var userConversations = await _mediator.Send(new GetUserConversationsQuery());
-                foreach (var convo in userConversations.Data) {
+            var isOnlineBeforeAddConnection = await _currentUserService.IsOnline();
+
+            var userId = _currentUserService.UserId;
+            if (userId is not null) {
+                await _connectionService.AddUserConnectionAsync(userId.Value, Context.ConnectionId);
+                var response = await _mediator.Send(new GetUserConversationsQuery());
+                foreach (var convo in response.Data) {
                     await _connectionService.AddToGroupAsync(Context.ConnectionId, convo.Id);
                     await Groups.AddToGroupAsync(Context.ConnectionId, $"Conversation_{convo.Id}");
 
                 }
+                if (!isOnlineBeforeAddConnection) {
+                    foreach (var con in response.Data)
+                        await Clients.Group($"Conversation_{con.Id}").SendAsync("UserOnlineStatusChanged", userId, true);
+                }
 
-                await Clients.Others.SendAsync("UserConnected", userId);
+
+
             }
             await base.OnConnectedAsync();
         }
 
         public override async Task OnDisconnectedAsync(Exception? exception) {
-            var userId = GetCurrentUserId();
+            var userId = _currentUserService.UserId;
             await _connectionService.RemoveUserConnectionAsync(Context.ConnectionId);
 
-            // Check if user has other connections, if not, notify offline
-            if (userId > 0) {
-                var connections = await _connectionService.GetUserConnectionsAsync(userId);
-                if (!connections.Any()) {
-                    await Clients.Others.SendAsync("UserDisconnected", userId);
+            if (userId is not null) {
+                var isOnline = await _currentUserService.IsOnline();
+                if (!isOnline) {
+                    await Clients.Others.SendAsync("UserOnlineStatusChanged", userId, false);
                 }
+            }
+
+            var isOnlineAfterRemoveConnection = await _currentUserService.IsOnline();
+            if (isOnlineAfterRemoveConnection) {
+                var userConversations = await _chatService.GetUserConversationsAsync(userId.Value);
+                foreach (var con in userConversations)
+                    await Clients.Group($"Conversation_{con.Id}").SendAsync("UserOnlineStatusChanged", userId, false);
+
             }
 
             await base.OnDisconnectedAsync(exception);
@@ -91,7 +105,7 @@ namespace ChatApi.Hubs {
                 }
                 else {
                     // Fallback to original behavior if data is not available
-                    var userId = GetCurrentUserId();
+                    var userId = _currentUserService.UserId!.Value;
                     var allParticipants = new List<int>(participantIds);
                     if (!allParticipants.Contains(userId))
                         allParticipants.Add(userId);
@@ -179,45 +193,6 @@ namespace ChatApi.Hubs {
             }
         }
 
-        public async Task SendDirectMessage(int recipientUserId, string content, MessageType messageType = MessageType.Text) {
-            var currentUserId = GetCurrentUserId();
-            bool isNewConversation = !await _chatService.HasDirectConversationWith(currentUserId, recipientUserId);
-
-            var command = new SendDirectMessageCommand {
-                SenderId = currentUserId,
-                RecipientUserId = recipientUserId,
-                Content = content,
-                MessageType = messageType
-            };
-
-            var response = await _mediator.Send(command);
-
-            if (response.Succeeded) {
-                var messageData = response.Data;
-                if (messageData != null) {
-                    await AddAllUserConnectionsToGroup(currentUserId, $"Conversation_{messageData.ConversationId}");
-                    await AddAllUserConnectionsToGroup(recipientUserId, $"Conversation_{messageData.ConversationId}");
-
-                    await Clients.OthersInGroup($"Conversation_{messageData.ConversationId}")
-                        .SendAsync("ReceiveMessage", messageData);
-
-                    if (isNewConversation) {
-                        var conversationResponse = await _mediator.Send(new GetConversationByIdQuery { ConversationId = messageData.ConversationId });
-                        await Clients.OthersInGroup($"Conversation_{messageData.ConversationId}")
-                            .SendAsync("NewConversationCreated", conversationResponse.Data);
-                    }
-                    else {
-                        await Clients.OthersInGroup($"Conversation_{messageData.ConversationId}")
-                        .SendAsync("ReceiveMessage", messageData);
-                    }
-
-                }
-            }
-            else {
-                await Clients.Caller.SendAsync("Error", response.Message);
-            }
-        }
-
         public async Task EditMessage(int messageId, string newContent) {
             var command = new EditMessageCommand {
                 MessageId = messageId,
@@ -260,9 +235,8 @@ namespace ChatApi.Hubs {
             };
 
             var response = await _mediator.Send(command);
-
             if (response.Succeeded) {
-                var userId = GetCurrentUserId();
+                var userId = _currentUserService.UserId!.Value;
                 // Note: Should notify sender specifically
                 await Clients.All.SendAsync("MessageRead", messageId, userId);
             }
@@ -279,7 +253,7 @@ namespace ChatApi.Hubs {
             var response = await _mediator.Send(command);
 
             if (response.Succeeded) {
-                var userId = GetCurrentUserId();
+                var userId = _currentUserService.UserId!.Value;
                 await Clients.OthersInGroup($"Conversation_{conversationId}")
                     .SendAsync("UserStartedTyping", conversationId, userId);
             }
@@ -294,7 +268,7 @@ namespace ChatApi.Hubs {
             var response = await _mediator.Send(command);
 
             if (response.Succeeded) {
-                var userId = GetCurrentUserId();
+                var userId = _currentUserService.UserId!.Value;
                 await Clients.OthersInGroup($"Conversation_{conversationId}")
                     .SendAsync("UserStoppedTyping", conversationId, userId);
             }
@@ -302,10 +276,10 @@ namespace ChatApi.Hubs {
         #endregion
 
         #region Helper Methods
-        private int GetCurrentUserId() {
-            var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(userIdClaim, out var userId) ? userId : 0;
-        }
+        //private int GetCurrentUserId() {
+        //    var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    return int.TryParse(userIdClaim, out var userId) ? userId : 0;
+        //}
 
         private async Task AddAllUserConnectionsToGroup(int userId, string groupName) {
             var userConnections = await _connectionService.GetUserConnectionsAsync(userId);
