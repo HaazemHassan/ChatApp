@@ -6,6 +6,7 @@ import { Participant, UserConversation } from '../models/conversations/responses
 import { environment } from '../../environments/environment';
 import { ConversationMessagesResponse, MessageResponse } from '../models/conversations/responses/conversation-messages-response';
 import { AuthenticationService } from './authentication.service';
+import { ConversationType } from '../enums/conversation-type';
 
 
 @Injectable({
@@ -85,7 +86,7 @@ export class ConversationsService {
   }
 
   getDirectConversationWithUser(conversations: UserConversation[], userId: number): UserConversation | null {
-    return conversations.find(conv =>
+    return conversations.find(conv => conv.type === ConversationType.Direct &&
       conv.participants.some(p => p.userId === userId)
     ) || null;
   }

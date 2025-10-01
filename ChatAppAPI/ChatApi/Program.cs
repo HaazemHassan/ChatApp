@@ -1,5 +1,6 @@
 using ChatApi.Bases.DataSeeding;
 using ChatApi.Core;
+using ChatApi.Core.Abstracts.InfrastructureAbstracts;
 using ChatApi.Core.Entities.IdentityEntities;
 using ChatApi.Core.Middlewares;
 using ChatApi.Extentions;
@@ -33,7 +34,7 @@ namespace ChatApi {
                     policy.AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials() //this line is important for SignalR
-                          .WithOrigins("http://localhost:4200");
+                          .WithOrigins("http://localhost:5000");
                 });
             });
 
@@ -44,12 +45,16 @@ namespace ChatApi {
             app.MapHub<ChatHub>("/chatHub");
 
 
-            #region Seed Data
+            #region Configure Data
             using (var scope = app.Services.CreateScope()) {
                 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                 var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+                var userConnectionRepository = scope.ServiceProvider.GetRequiredService<IUserConnectionRepository>();
+
                 await ApplicationRoleSeeder.SeedAsync(roleManager);
                 await ApplicationUserSeeder.SeedAsync(userManager);
+                await UserConnectionsRemover.RemoveAsync(userConnectionRepository);
+                await UserOnlineStatusResetter.ResetAsync(userManager);
             }
             #endregion
 

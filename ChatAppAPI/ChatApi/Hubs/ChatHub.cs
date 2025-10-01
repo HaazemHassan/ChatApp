@@ -37,7 +37,7 @@ namespace ChatApi.Hubs {
                 }
                 if (!isOnlineBeforeAddConnection) {
                     foreach (var con in response.Data)
-                        await Clients.Group($"Conversation_{con.Id}").SendAsync("UserOnlineStatusChanged", userId, true);
+                        await Clients.OthersInGroup($"Conversation_{con.Id}").SendAsync("UserOnlineStatusChanged", userId, true);
                 }
 
 
@@ -61,7 +61,7 @@ namespace ChatApi.Hubs {
             if (isOnlineAfterRemoveConnection) {
                 var userConversations = await _chatService.GetUserConversationsAsync(userId.Value);
                 foreach (var con in userConversations)
-                    await Clients.Group($"Conversation_{con.Id}").SendAsync("UserOnlineStatusChanged", userId, false);
+                    await Clients.OthersInGroup($"Conversation_{con.Id}").SendAsync("UserOnlineStatusChanged", userId, false);
 
             }
 
