@@ -4,6 +4,7 @@ using ChatApi.Core.Abstracts.ServicesContracts;
 using ChatApi.Core.Bases;
 using ChatApi.Core.Entities.ChatEntities;
 using ChatApi.Core.Enums;
+using ChatApi.Core.Enums.ChatEnums;
 using ChatApi.Core.Features.Chat.Commands.RequestsModels;
 using ChatApi.Core.Features.Chat.Commands.Responses;
 using ChatApi.Core.Features.Chat.Queries.Responses;
@@ -26,7 +27,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
         private readonly ICurrentUserService _currentUserService;
         private readonly IApplicationUserService _applicationUserService;
         private readonly IMapper _mapper;
-        private readonly IGenericRepository<Conversation> _conversationRepository;   //used only to create transactions
+        private readonly IGenericRepository<Conversation> _conversationRepository;
 
         public ChatCommandHandler(
             IChatService chatService,
@@ -74,7 +75,11 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 var responseModel = _mapper.Map<CreateConversationResponse>(conversation);
                 responseModel.Title = await _chatService.GetConversationTitle(conversation.Id);
                 var lastMessage = await _chatService.GetLastMessageInConversationAsync(conversation.Id);
-                responseModel.LastMessage = _mapper.Map<MessageResponse>(lastMessage);
+                if (lastMessage != null) {
+                    var lastMessageResponse = _mapper.Map<MessageResponse>(lastMessage);
+                    lastMessageResponse.DeliveryStatus = CalculateDeliveryStatus(lastMessage);
+                    responseModel.LastMessage = lastMessageResponse;
+                }
 
                 return Success(responseModel);
             }
@@ -83,9 +88,6 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 return BadRequest<CreateConversationResponse>($"Unexpected error: {ex.Message}");
             }
         }
-
-
-
 
         public async Task<Response<SendMessageResponse>> Handle(SendMessageCommand request, CancellationToken cancellationToken) {
             if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
@@ -115,6 +117,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
 
             var messageResponseData = await _chatService.GetMessageWithDeliveryAsync(message.Id, senderId);
             var responseModel = _mapper.Map<SendMessageResponse>(messageResponseData);
+            responseModel.DeliveryStatus = CalculateDeliveryStatus(messageResponseData);
             return Success(responseModel);
 
         }
@@ -231,5 +234,46 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 return BadRequest<string>($"Unexpected error: {ex.Message}");
             }
         }
+
+        #region Helpers
+        private static DeliveryStatus CalculateDeliveryStatus(Message message) {
+            // If no deliveries exist, message is just sent
+            if (message.MessageDeliveries == null || !message.MessageDeliveries.Any())
+                return DeliveryStatus.Sent;
+
+            // Get the conversation to know how many participants (excluding sender)
+            var conversation = message.Conversation;
+            if (conversation == null)
+                return DeliveryStatus.Sent;
+
+            // Count active participants excluding the sender
+            var expectedRecipients = conversation.Participants
+                .Count(p => p.IsActive && p.UserId != message.SenderId);
+
+            // If there are no other participants, mark as delivered
+            if (expectedRecipients == 0)
+                return DeliveryStatus.Delivered;
+
+            var deliveries = message.MessageDeliveries.ToList();
+            var deliveryCount = deliveries.Count;
+
+            // If not all recipients have delivery records yet, it's still "Sent"
+            if (deliveryCount < expectedRecipients)
+                return DeliveryStatus.Sent;
+
+            // Check if all recipients have read the message
+            var allRead = deliveries.All(d => d.Status == DeliveryStatus.Read);
+            if (allRead)
+                return DeliveryStatus.Read;
+
+            // Check if all recipients have at least received the message
+            var allDelivered = deliveries.All(d => d.Status >= DeliveryStatus.Delivered);
+            if (allDelivered)
+                return DeliveryStatus.Delivered;
+
+            // Otherwise, it's still just sent
+            return DeliveryStatus.Sent;
+        }
+        #endregion
     }
 }

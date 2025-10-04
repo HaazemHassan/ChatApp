@@ -54,6 +54,7 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   newMessage = input<MessageResponse | null>(null);
   messages: MessageResponse[] = [];
   messageText: string = '';
+  groupedMessages: { date: string; messages: MessageResponse[] }[] = [];
 
 
   constructor(
@@ -79,8 +80,12 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
           this.messages = this.messages.map((message, index) =>
             index === existingMessageIndex ? newMsg : message
           );
+          // Update the message in the grouped messages as well
+          this.updateMessageInGroup(newMsg);
         } else {
           this.messages = [...this.messages, newMsg];
+          // Add the new message to the appropriate date group
+          this.addMessageToGroup(newMsg);
         }
         this.scrollToBottom(true);
       }
@@ -104,6 +109,7 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
 
 
   private loadMessages(): void {
+    console.log('Loading messages for conversation:', this.conversation());
 
     if (!this.conversation() || !this.conversation().id) return;
 
@@ -117,6 +123,7 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
           this.messages = response.messages || [];
           this.loading = false;
           this.shouldScrollToBottom = true;
+          this.groupMessagesByDate();
 
           const othersMessages = this.messages.filter(m => m.senderId !== this.currentUserId && m.deliveryStatus !== DeliveryStatus.Read);
           console.log('Others messages needing read update:', othersMessages);
@@ -194,13 +201,86 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   private updateMessagesDeliveryStatus(messageIds: number[], deliveryStatus: DeliveryStatus): void {
     this.messages = this.messages.map(message => {
       if (messageIds.includes(message.id) && message.senderId === this.currentUserId) {
-        return {
+        const updatedMessage = {
           ...message,
           deliveryStatus: deliveryStatus
         };
+        // Update the message in grouped messages as well
+        this.updateMessageInGroup(updatedMessage);
+        return updatedMessage;
       }
       return message;
     });
+  }
+
+  //Functions to group messages by date
+  private groupMessagesByDate(): void {
+    const grouped = new Map<string, MessageResponse[]>();
+
+    this.messages.forEach(message => {
+      const messageDate = new Date(message.sentAt);
+      const dateKey = this.getDateKey(messageDate);
+
+      if (!grouped.has(dateKey)) {
+        grouped.set(dateKey, []);
+      }
+      grouped.get(dateKey)!.push(message);
+    });
+
+    this.groupedMessages = Array.from(grouped.entries()).map(([date, messages]) => ({
+      date,
+      messages
+    }));
+  }
+
+  private addMessageToGroup(message: MessageResponse): void {
+    const messageDate = new Date(message.sentAt);
+    const dateKey = this.getDateKey(messageDate);
+    const existingGroup = this.groupedMessages.find(g => g.date === dateKey);
+
+    if (existingGroup) {
+      existingGroup.messages = [...existingGroup.messages, message];
+    } else {
+      this.groupedMessages = [...this.groupedMessages, {
+        date: dateKey,
+        messages: [message]
+      }];
+    }
+  }
+
+  private updateMessageInGroup(updatedMessage: MessageResponse): void {
+    const messageDate = new Date(updatedMessage.sentAt);
+    const dateKey = this.getDateKey(messageDate);
+
+    const group = this.groupedMessages.find(g => g.date === dateKey);
+    if (group) {
+      group.messages = group.messages.map(msg =>
+        msg.id === updatedMessage.id ? updatedMessage : msg
+      );
+    }
+  }
+
+  private getDateKey(date: Date): string {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Reset time for comparison
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+    if (dateOnly.getTime() === todayOnly.getTime()) {
+      return 'Today';
+    } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+      return 'Yesterday';
+    } else {
+      // Format as "DD/MM/YYYY"
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
   }
 
 }

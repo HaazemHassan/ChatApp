@@ -212,14 +212,17 @@ namespace ChatApi.Hubs {
                     var message = await _chatService.GetMessageWithSenderAsync(messageId);
 
                     if (message?.SenderId != null && message.SenderId != userId) {
-                        int senderId = message.SenderId.Value;
-                        if (!senderNotifications.ContainsKey(senderId))
-                            senderNotifications[senderId] = new List<int>();
-                        senderNotifications[senderId].Add(messageId);
+                        // Check if all participants have received the message
+                        if (await _chatService.AreAllParticipantsDeliveredAsync(message, DeliveryStatus.Delivered)) {
+                            int senderId = message.SenderId.Value;
+                            if (!senderNotifications.ContainsKey(senderId))
+                                senderNotifications[senderId] = new List<int>();
+                            senderNotifications[senderId].Add(messageId);
+                        }
                     }
                 }
 
-                // Notify each sender about their delivered messages
+                // Notify each sender about their delivered messages (only if all participants received them)
                 foreach (var senderNotification in senderNotifications) {
                     var senderId = senderNotification.Key;
                     var deliveredMessageIds = senderNotification.Value;
@@ -255,14 +258,17 @@ namespace ChatApi.Hubs {
                 foreach (var messageId in messageIds) {
                     var message = await _chatService.GetMessageWithSenderAsync(messageId);
                     if (message?.SenderId != null && message.SenderId != userId) {
-                        if (!senderNotifications.ContainsKey(message.SenderId.Value)) {
-                            senderNotifications[message.SenderId.Value] = new List<int>();
+                        // Check if all participants have read the message
+                        if (await _chatService.AreAllParticipantsDeliveredAsync(message, DeliveryStatus.Read)) {
+                            if (!senderNotifications.ContainsKey(message.SenderId.Value)) {
+                                senderNotifications[message.SenderId.Value] = new List<int>();
+                            }
+                            senderNotifications[message.SenderId.Value].Add(messageId);
                         }
-                        senderNotifications[message.SenderId.Value].Add(messageId);
                     }
                 }
 
-                // Notify each sender about their read messages
+                // Notify each sender about their read messages (only if all participants read them)
                 foreach (var senderNotification in senderNotifications) {
                     var senderId = senderNotification.Key;
                     var readMessageIds = senderNotification.Value;
@@ -279,7 +285,7 @@ namespace ChatApi.Hubs {
         #endregion
 
 
-        #region Helpres
+        #region Helpers
         private async Task HandleUndeliveredMessagesOnConnectionAsync(int userId) {
             try {
                 var undeliveredMessageIds = await _chatService.GetUndeliveredMessageIdsForUserAsync(userId);

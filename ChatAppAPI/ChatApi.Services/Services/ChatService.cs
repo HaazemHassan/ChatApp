@@ -496,6 +496,34 @@ namespace ChatApi.Services.Services {
             }
         }
 
+        public async Task<bool> AreAllParticipantsDeliveredAsync(Message message, DeliveryStatus requiredStatus) {
+            if (message.Conversation == null)
+                return false;
+
+            // Get active participants excluding the sender
+            var expectedRecipients = message.Conversation.Participants
+                .Where(p => p.IsActive && p.UserId != message.SenderId)
+                .Select(p => p.UserId)
+                .ToList();
+
+            if (!expectedRecipients.Any())
+                return true; // No recipients, consider as delivered/read
+
+            // Get all deliveries for this message
+            var deliveries = await _messageDeliveryRepository.GetMessageDeliveriesAsync(message.Id);
+
+            // Check if all expected recipients have the required delivery status
+            foreach (var recipientId in expectedRecipients) {
+                var delivery = deliveries.FirstOrDefault(d => d.UserId == recipientId);
+                
+                // If no delivery record exists or status is less than required, return false
+                if (delivery == null || delivery.Status < requiredStatus)
+                    return false;
+            }
+
+            return true;
+        }
+
         #endregion
 
 
@@ -504,6 +532,10 @@ namespace ChatApi.Services.Services {
 
 
 }
+
+
+
+
 
 
 

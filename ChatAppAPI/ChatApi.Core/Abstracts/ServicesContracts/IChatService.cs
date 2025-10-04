@@ -28,5 +28,6 @@ namespace ChatApi.Core.Abstracts.ServicesContracts {
         Task<string> GetConversationTitle(int convesationId);
         Task<Message?> GetLastMessageInConversationAsync(int conversationId);
         Task<IEnumerable<int>> GetUndeliveredMessageIdsForUserAsync(int userId);
+        Task<bool> AreAllParticipantsDeliveredAsync(Message message, DeliveryStatus requiredStatus);
     }
 }

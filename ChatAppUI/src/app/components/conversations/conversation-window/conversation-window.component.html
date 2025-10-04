@@ -32,7 +32,13 @@
     <!-- Messages List -->
     @if (!loading && !error && messages.length > 0) {
     <div #messagesList class="messages-list">
-      @for (message of messages; track message.id; let i = $index) {
+      @for (group of groupedMessages; track group.date) {
+      <!-- Date Separator -->
+      <div class="date-separator">
+        <span class="date-label">{{ group.date }}</span>
+      </div>
+
+      @for (message of group.messages; track message.id; let i = $index) {
       <div
         class="message-wrapper"
         [class.current-user]="
@@ -83,7 +89,7 @@
           </div>
         </div>
       </div>
-      }
+      } }
     </div>
     }
   </div>

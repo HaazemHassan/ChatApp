@@ -2,7 +2,7 @@ import { ChatHubService } from './chat-hub.service';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, OnInit } from '@angular/core';
 import { ApiResponse } from '../models/api-response';
-import { catchError, map, Observable, tap, throwError } from 'rxjs';
+import { BehaviorSubject, catchError, map, Observable, tap, throwError } from 'rxjs';
 import { LoginRequest } from '../models/auth/requests/login-request';
 import { RegisterRequest } from '../models/auth/requests/register-request';
 import { RefreshTokenRequest } from '../models/auth/requests/refresh-token-request';
@@ -15,9 +15,14 @@ import { User } from '../models/interfaces/userInterface';
 })
 export class AuthenticationService {
   currentUser: User | null = null;
+  private currentUserSubject: BehaviorSubject<User | null>;
+  currentUser$: Observable<User | null>;
 
   constructor(private httpClient: HttpClient, private chatHubService: ChatHubService) {
-    this.currentUser = this.getCurrentUser();
+    const storedUser = this.getStoredCurrentUser();
+    this.currentUserSubject = new BehaviorSubject<User | null>(storedUser);
+    this.currentUser$ = this.currentUserSubject.asObservable();
+    this.currentUser = storedUser;
 
     if (this.isAuthenticated()) {
       this.chatHubService.startConnection(this.getAccessToken());
@@ -39,10 +44,7 @@ export class AuthenticationService {
             if (response.data.refreshToken) {
               document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
             }
-            localStorage.setItem(
-              'currentUser',
-              JSON.stringify(response.data.user)
-            );
+            this.setAuthenticatedUser(response.data.user);
             if (this.isAuthenticated()) {
               this.chatHubService.startConnection(this.getAccessToken());
             }
@@ -71,10 +73,7 @@ export class AuthenticationService {
             if (response.data.refreshToken) {
               document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
             }
-            localStorage.setItem(
-              'currentUser',
-              JSON.stringify(response.data.user)
-            );
+            this.setAuthenticatedUser(response.data.user);
           }
           return response;
         }),
@@ -95,12 +94,12 @@ export class AuthenticationService {
       .pipe(
         tap(() => {
           this.clearTokens();
-          this.removeCurrentUser();
+          this.setAuthenticatedUser(null);
         }),
         catchError((error) => {
           console.error('Logout failed:', error);
           this.clearTokens();
-          this.removeCurrentUser();
+          this.setAuthenticatedUser(null);
           return throwError(() => error);
         })
       );
@@ -132,6 +131,9 @@ export class AuthenticationService {
             if (response.data.refreshToken) {
               document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
             }
+            if (response.data.user) {
+              this.setAuthenticatedUser(response.data.user);
+            }
           }
           return response;
         }),
@@ -149,8 +151,7 @@ export class AuthenticationService {
   }
 
   getCurrentUser(): User | null {
-    const user = localStorage.getItem('currentUser');
-    return user ? (JSON.parse(user) as User) : null;
+    return this.currentUserSubject.value;
   }
 
   getCurrentUserId(): number | null {
@@ -185,6 +186,22 @@ export class AuthenticationService {
   }
 
   removeCurrentUser(): void {
-    localStorage.removeItem('currentUser');
+    this.setAuthenticatedUser(null);
+  }
+
+  private getStoredCurrentUser(): User | null {
+    const user = localStorage.getItem('currentUser');
+    return user ? (JSON.parse(user) as User) : null;
+  }
+
+  private setAuthenticatedUser(user: User | null): void {
+    this.currentUser = user;
+    if (user) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('currentUser');
+    }
+
+    this.currentUserSubject.next(user);
   }
 }

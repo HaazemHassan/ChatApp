@@ -30,7 +30,26 @@
           Register
         </a>
         } @if (isAuthenticated()) {
-        <button (click)="logout()" class="btn btn-logout">Logout</button>
+        <div class="user-menu" [class.open]="isUserMenuOpen">
+          <button
+            type="button"
+            class="btn user-button"
+            (click)="toggleUserMenu($event)"
+            aria-haspopup="true"
+            [attr.aria-expanded]="isUserMenuOpen"
+          >
+            <span class="user-name">{{ "@" + userDisplayName }}</span>
+            <span class="chevron" aria-hidden="true">▾</span>
+          </button>
+
+          @if (isUserMenuOpen) {
+          <div class="dropdown" (click)="$event.stopPropagation()">
+            <button type="button" class="dropdown-item" (click)="logout()">
+              Logout
+            </button>
+          </div>
+          }
+        </div>
         }
       </div>
     </div>

@@ -176,7 +176,6 @@ export class ConversationsComponent implements OnInit {
   }
 
   private handleMessagesDelivered(messageIds: number[]): void {
-    // Update conversations with delivered messages
     this.conversations = this.conversations.map(conversation => {
       if (conversation.lastMessage &&
         messageIds.includes(conversation.lastMessage.id) &&

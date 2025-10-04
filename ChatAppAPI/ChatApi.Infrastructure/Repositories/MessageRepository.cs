@@ -13,6 +13,8 @@ namespace ChatApi.Infrastructure.Repositories {
                 .Include(m => m.Sender)
                 .Include(m => m.ReplyToMessage)
                     .ThenInclude(r => r.Sender)
+                .Include(m => m.Conversation)
+                    .ThenInclude(c => c.Participants)
                 .OrderBy(m => m.SentAt)
                 .Skip(skip)
                 .Take(take)
@@ -25,6 +27,8 @@ namespace ChatApi.Infrastructure.Repositories {
                 .Include(m => m.Sender)
                 .Include(m => m.ReplyToMessage)
                     .ThenInclude(r => r.Sender)
+                .Include(m => m.Conversation)
+                    .ThenInclude(c => c.Participants)
                 .Include(m => m.MessageDeliveries.Where(md => md.UserId != userId))
                 .OrderBy(m => m.SentAt)
                 .Skip(skip)
@@ -44,6 +48,7 @@ namespace ChatApi.Infrastructure.Repositories {
             return await _dbContext.Messages
                 .Include(m => m.Sender)
                 .Include(m => m.Conversation)
+                    .ThenInclude(c => c.Participants)
                 .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted);
         }
 
@@ -51,7 +56,8 @@ namespace ChatApi.Infrastructure.Repositories {
             return await _dbContext.Messages
                 .Include(m => m.Sender)
                 .Include(m => m.Conversation)
-                .Include(m => m.MessageDeliveries.Where(md => md.UserId == userId))
+                    .ThenInclude(c => c.Participants)
+                .Include(m => m.MessageDeliveries.Where(md => md.UserId != userId))
                 .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted);
         }
     }
