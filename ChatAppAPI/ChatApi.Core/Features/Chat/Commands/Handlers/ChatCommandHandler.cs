@@ -6,6 +6,7 @@ using ChatApi.Core.Entities.ChatEntities;
 using ChatApi.Core.Enums;
 using ChatApi.Core.Features.Chat.Commands.RequestsModels;
 using ChatApi.Core.Features.Chat.Commands.Responses;
+using ChatApi.Core.Features.Chat.Queries.Responses;
 using MediatR;
 
 namespace ChatApi.Core.Features.Chat.Commands.Handlers {
@@ -74,6 +75,8 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
 
                 var responseModel = _mapper.Map<CreateConversationResponse>(conversation);
                 responseModel.Title = await _chatService.GetConversationTitle(conversation.Id);
+                var lastMessage = await _chatService.GetLastMessageInConversationAsync(conversation.Id);
+                responseModel.LastMessage = _mapper.Map<MessageResponse>(lastMessage);
 
                 return Success(responseModel);
             }

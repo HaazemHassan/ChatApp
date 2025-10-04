@@ -8,5 +8,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Responses {
         public ConversationType Type { get; set; }
         public DateTime LastMessageAt { get; set; }
         public List<ConversationParticipantResponse> Participants { get; set; } = new();
+        public MessageResponse? LastMessage { get; set; }
+
     }
 }
