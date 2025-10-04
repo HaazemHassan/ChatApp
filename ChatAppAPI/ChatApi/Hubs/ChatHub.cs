@@ -196,28 +196,6 @@ namespace ChatApi.Hubs {
         }
 
 
-        public async Task MessageDelivered(int messageId) {
-            var command = new MarkMessageAsDeliveredCommand {
-                MessageId = messageId
-            };
-
-            var response = await _mediator.Send(command);
-
-            if (response.Succeeded) {
-                var userId = _currentUserService.UserId!.Value;
-
-                var message = await _chatService.GetMessageWithSenderAsync(messageId);
-                if (message != null && message.SenderId != userId) {
-                    var senderConnections = await _connectionService.GetUserConnectionsAsync(message.SenderId.Value);
-                    await Clients.Clients(senderConnections)
-                        .SendAsync("MessageDelivered", messageId, userId);
-                }
-            }
-            else {
-                await Clients.Caller.SendAsync("Error", response.Message);
-            }
-        }
-
         public async Task MessagesDelivered(List<int> messageIds) {
             var command = new MarkMessagesAsDeliveredCommand {
                 MessageIds = messageIds
@@ -256,20 +234,7 @@ namespace ChatApi.Hubs {
             }
         }
 
-        public async Task MarkMessageAsRead(int messageId) {
-            var command = new MarkMessageAsReadCommand {
-                MessageId = messageId
-            };
-
-            var response = await _mediator.Send(command);
-            if (response.Succeeded) {
-                var userId = _currentUserService.UserId!.Value;
-                // Note: Should notify sender specifically
-                await Clients.All.SendAsync("MessageRead", messageId, userId);
-            }
-        }
-
-        public async Task MarkMessagesAsRead(List<int> messageIds) {
+        public async Task MessagesRead(List<int> messageIds) {
             if (messageIds == null || !messageIds.Any()) {
                 await Clients.Caller.SendAsync("Error", "Message IDs list cannot be empty");
                 return;

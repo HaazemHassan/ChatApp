@@ -58,20 +58,34 @@ export class ConversationsComponent implements OnInit {
       this.handleNewDirectConversationInfoReceived(newConversation);
     });
 
-    this.chatHubService.onReceiveMessage((message: MessageResponse) => {
-      if (message.senderId !== this.authService.getCurrentUser()?.id)
-        this.chatHubService.NotifyMessageDelivered(message.id).catch(err => {
-          console.error('Error notifying message delivered:', err);
-        });
+    this.chatHubService.onReceiveMessage(async (message: MessageResponse) => {
       this.handleMessageReceived(message);
+      try {
+        const currentUserId = this.authService.getCurrentUser()?.id;
+
+        if (message.senderId !== currentUserId) {
+          await this.chatHubService.NotifyMessagesDelivered([message.id]);
+
+          if (this.selectedConversation?.id === message.conversationId) {
+            try {
+              await this.chatHubService.NotifyMessagesRead([message.id]);
+            } catch (err) {
+              console.error('Error notifying messages read:', err);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error notifying messages delivered:', err);
+      }
     });
+
 
     this.chatHubService.onUserOnlineStatusChanged((userId: number, isOnline: boolean) => {
       this.handleUserOnlineStatusChange(userId, isOnline);
     });
 
-    this.chatHubService.onMessageDelivered((messageId: number) => {
-      this.handleMessageDelivered(messageId);
+    this.chatHubService.onMessagesDelivered((messageIds: number[]) => {
+      this.handleMessagesDelivered(messageIds);
     });
   }
 
@@ -161,37 +175,33 @@ export class ConversationsComponent implements OnInit {
     );
   }
 
-  private handleMessageDelivered(messageId: number): void {
-    for (let conversation of this.conversations) {
-      if (conversation.lastMessage && conversation.lastMessage.id === messageId) {
-        if (conversation.lastMessage.deliveryStatus === DeliveryStatus.Sent) {
-          const updatedLastMessage = {
-            ...conversation.lastMessage,
-            deliveryStatus: DeliveryStatus.Delivered
-          };
-          const updatedConversation = {
-            ...conversation,
-            lastMessage: updatedLastMessage
-          };
+  private handleMessagesDelivered(messageIds: number[]): void {
+    // Update conversations with delivered messages
+    this.conversations = this.conversations.map(conversation => {
+      if (conversation.lastMessage &&
+        messageIds.includes(conversation.lastMessage.id) &&
+        conversation.lastMessage.deliveryStatus === DeliveryStatus.Sent) {
 
-          this.conversations = this.conversations.map(conv =>
-            conv.id === conversation.id ? updatedConversation : conv
-          );
-
-          console.log(`Last message ${messageId} in conversation ${conversation.id} updated to Delivered`);
-        }
-        break;
+        const updatedLastMessage = {
+          ...conversation.lastMessage,
+          deliveryStatus: DeliveryStatus.Delivered
+        };
+        return {
+          ...conversation,
+          lastMessage: updatedLastMessage
+        };
       }
-    }
+      return conversation;
+    });
 
-    // Also update the newMessage if it matches
-    if (this.newMessage && this.newMessage.id === messageId &&
+    // Also update the newMessage if it matches any of the messageIds
+    if (this.newMessage &&
+      messageIds.includes(this.newMessage.id) &&
       this.newMessage.deliveryStatus === DeliveryStatus.Sent) {
       this.newMessage = {
         ...this.newMessage,
         deliveryStatus: DeliveryStatus.Delivered
       };
-      console.log(`New message ${messageId} updated to Delivered`);
     }
   }
 

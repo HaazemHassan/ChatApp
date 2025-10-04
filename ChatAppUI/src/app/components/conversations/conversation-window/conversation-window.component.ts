@@ -1,3 +1,4 @@
+import { DeliveryStatus } from './../../../enums/delivery-status';
 import { SendMessageRequest } from './../../../models/conversations/requests/send-message-request';
 import {
   Participant,
@@ -27,7 +28,6 @@ import { FormatMessageTimePipe } from "../../../pipes/format-message-time.pipe";
 import { StringInitialsPipe } from "../../../pipes/string-initials.pipe";
 import { MessageType } from "../../../enums/message-type";
 import { ConversationType } from '../../../enums/conversation-type';
-import { DeliveryStatus } from '../../../enums/delivery-status';
 
 
 
@@ -95,7 +95,11 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
 
     // Listen for bulk message delivery status updates
     this.chatHubService.onMessagesDelivered((messageIds: number[]) => {
-      this.updateMessagesDeliveryStatus(messageIds);
+      this.updateMessagesDeliveryStatus(messageIds, DeliveryStatus.Delivered);
+    });
+
+    this.chatHubService.onMessagesRead((messageIds: number[]) => {
+      this.updateMessagesDeliveryStatus(messageIds, DeliveryStatus.Read);
     });
   }
 
@@ -114,7 +118,9 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
           this.messages = response.messages || [];
           this.loading = false;
           this.shouldScrollToBottom = true;
-
+          this.chatHubService.NotifyMessagesRead(this.messages.map(m => m.id)).catch(err => {
+            console.error('Error notifying messages read:', err);
+          });
         },
         error: (err) => {
           this.error = 'Failed to load messages';
@@ -180,16 +186,18 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
     }
   }
 
-  private updateMessagesDeliveryStatus(messageIds: number[]): void {
+  private updateMessagesDeliveryStatus(messageIds: number[], deliveryStatus: DeliveryStatus): void {
     this.messages = this.messages.map(message => {
       if (messageIds.includes(message.id) && message.senderId === this.currentUserId) {
         return {
           ...message,
-          deliveryStatus: DeliveryStatus.Delivered
+          deliveryStatus: deliveryStatus
         };
       }
       return message;
     });
   }
+
+
 
 }
