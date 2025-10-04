@@ -220,12 +220,7 @@ namespace ChatApi.Services.Services {
             return await _messageRepository.GetConversationMessagesWithDeliveryAsync(conversationId, userId, skip, take);
         }
 
-        public async Task<ServiceOperationStatus> MarkMessageAsReadAsync(int messageId, int userId) {
-            var result = await MarkMessagesAsReadAsync(new List<int> { messageId }, userId);
-            return result.Status;
-        }
-
-        public async Task<ServiceOperationResult<string>> MarkMessagesAsReadAsync(List<int> messageIds, int userId) {
+        public async Task<ServiceOperationResult<string?>> MarkMessagesAsReadAsync(List<int> messageIds, int userId) {
             if (messageIds == null || !messageIds.Any())
                 return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "Message IDs list cannot be empty");
 
@@ -236,10 +231,58 @@ namespace ChatApi.Services.Services {
             if (!messages.Any())
                 return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "No messages found");
 
+            var (deliveriesToAdd, deliveriesToUpdate) = await PrepareMessageDeliveriesForReadAsync(messages, userId);
+            var participantsToUpdate = await PrepareParticipantsForReadAsync(messages, userId);
+
+            await _messageDeliveryRepository.AddRangeAsync(deliveriesToAdd);
+            await _messageDeliveryRepository.UpdateRangeAsync(deliveriesToUpdate);
+            await _participantRepository.UpdateRangeAsync(participantsToUpdate);
+            return ServiceOperationResult<string>.Success("Messages marked as read successfully");
+        }
+
+        private async Task<(List<MessageDelivery> toAdd, List<MessageDelivery> toUpdate)> PrepareMessageDeliveriesForReadAsync(List<Message> messages, int userId) {
+            var deliveriesToAdd = new List<MessageDelivery>();
+            var deliveriesToUpdate = new List<MessageDelivery>();
+
+            foreach (var message in messages) {
+                // Skip messages sent by the same user
+                if (message.SenderId == userId)
+                    continue;
+
+                // Check if user is participant in the conversation
+                if (!await IsUserInConversationAsync(userId, message.ConversationId))
+                    continue;
+
+                var existingDelivery = await _messageDeliveryRepository.GetUserMessageDeliveryAsync(message.Id, userId);
+
+                if (existingDelivery is null) {
+                    deliveriesToAdd.Add(new MessageDelivery {
+                        MessageId = message.Id,
+                        UserId = userId,
+                        Status = DeliveryStatus.Read,
+                        DeliveredAt = DateTime.UtcNow,
+                        ReadAt = DateTime.UtcNow
+                    });
+                }
+                else if (existingDelivery.Status != DeliveryStatus.Read) {
+                    existingDelivery.Status = DeliveryStatus.Read;
+                    existingDelivery.DeliveredAt = existingDelivery.DeliveredAt ?? DateTime.UtcNow;
+                    existingDelivery.ReadAt = DateTime.UtcNow;
+                    deliveriesToUpdate.Add(existingDelivery);
+                }
+            }
+
+            return (deliveriesToAdd, deliveriesToUpdate);
+        }
+
+        private async Task<List<ConversationParticipant>> PrepareParticipantsForReadAsync(List<Message> messages, int userId) {
             var participantsToUpdate = new List<ConversationParticipant>();
             var processedConversations = new HashSet<int>();
 
             foreach (var message in messages) {
+                if (message.SenderId == userId)
+                    continue;
+
                 // Skip if conversation already processed (optimization for multiple messages in same conversation)
                 if (processedConversations.Contains(message.ConversationId))
                     continue;
@@ -248,7 +291,6 @@ namespace ChatApi.Services.Services {
                 if (participant == null)
                     continue;
 
-                // Find the latest message in this conversation from our list
                 var latestMessageInConversation = messages
                     .Where(m => m.ConversationId == message.ConversationId)
                     .OrderByDescending(m => m.SentAt)
@@ -260,19 +302,11 @@ namespace ChatApi.Services.Services {
                 processedConversations.Add(message.ConversationId);
             }
 
-            if (participantsToUpdate.Any()) {
-                await _participantRepository.UpdateRangeAsync(participantsToUpdate);
-            }
-
-            return ServiceOperationResult<string>.Success("Messages marked as read successfully");
+            return participantsToUpdate;
         }
 
-        public async Task<ServiceOperationStatus> MarkMessageAsDeliveredAsync(int messageId, int userId) {
-            var result = await MarkMessagesAsDeliveredAsync(new List<int> { messageId }, userId);
-            return result.Status;
-        }
 
-        public async Task<ServiceOperationResult<string>> MarkMessagesAsDeliveredAsync(List<int> messageIds, int userId) {
+        public async Task<ServiceOperationResult<string?>> MarkMessagesAsDeliveredAsync(List<int> messageIds, int userId) {
             if (messageIds == null || !messageIds.Any())
                 return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "Message IDs list cannot be empty");
 
@@ -465,5 +499,13 @@ namespace ChatApi.Services.Services {
         #endregion
 
 
+
     }
+
+
 }
+
+
+
+
+

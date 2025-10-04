@@ -93,7 +93,6 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   ngOnInit(): void {
     this.currentUserId = this.authService.getCurrentUserId();
 
-    // Listen for bulk message delivery status updates
     this.chatHubService.onMessagesDelivered((messageIds: number[]) => {
       this.updateMessagesDeliveryStatus(messageIds, DeliveryStatus.Delivered);
     });
@@ -118,9 +117,15 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
           this.messages = response.messages || [];
           this.loading = false;
           this.shouldScrollToBottom = true;
-          this.chatHubService.NotifyMessagesRead(this.messages.map(m => m.id)).catch(err => {
-            console.error('Error notifying messages read:', err);
-          });
+
+          const othersMessages = this.messages.filter(m => m.senderId !== this.currentUserId && m.deliveryStatus !== DeliveryStatus.Read);
+          console.log('Others messages needing read update:', othersMessages);
+          if (othersMessages.length !== 0) {
+            this.chatHubService.NotifyMessagesRead(othersMessages.map(m => m.id)).catch(err => {
+              console.error('Error notifying messages read:', err);
+            });
+          }
+
         },
         error: (err) => {
           this.error = 'Failed to load messages';
@@ -197,7 +202,5 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
       return message;
     });
   }
-
-
 
 }

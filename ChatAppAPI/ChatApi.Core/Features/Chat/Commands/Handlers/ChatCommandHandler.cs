@@ -18,9 +18,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
         IRequestHandler<AddParticipantCommand, Response<string>>,
         IRequestHandler<RemoveParticipantCommand, Response<string>>,
         IRequestHandler<UpdateTypingStatusCommand, Response<string>>,
-        IRequestHandler<MarkMessageAsReadCommand, Response<string>>,
         IRequestHandler<MarkMultipleMessagesAsReadCommand, Response<string>>,
-        IRequestHandler<MarkMessageAsDeliveredCommand, Response<string>>,
         IRequestHandler<MarkMessagesAsDeliveredCommand, Response<string>> {
 
         private readonly IChatService _chatService;
@@ -178,18 +176,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
             };
         }
 
-        public async Task<Response<string>> Handle(MarkMessageAsReadCommand request, CancellationToken cancellationToken) {
-            if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
-                return Unauthorized<string>("User not authenticated");
 
-            var userId = _currentUserService.UserId.Value;
-            var result = await _chatService.MarkMessageAsReadAsync(request.MessageId, userId);
-            return result switch {
-                ServiceOperationStatus.Succeeded => Success("Message marked as read"),
-                ServiceOperationStatus.NotFound => NotFound<string>("Message not found"),
-                _ => BadRequest<string>("Failed to mark message as read")
-            };
-        }
 
         public async Task<Response<string>> Handle(MarkMultipleMessagesAsReadCommand request, CancellationToken cancellationToken) {
             if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
@@ -216,19 +203,6 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 await transaction.RollbackAsync(cancellationToken);
                 return BadRequest<string>($"Unexpected error: {ex.Message}");
             }
-        }
-
-        public async Task<Response<string>> Handle(MarkMessageAsDeliveredCommand request, CancellationToken cancellationToken) {
-            if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
-                return Unauthorized<string>("User not authenticated");
-
-            var userId = _currentUserService.UserId.Value;
-            var result = await _chatService.MarkMessageAsDeliveredAsync(request.MessageId, userId);
-            return result switch {
-                ServiceOperationStatus.Succeeded => Success("Message marked as delivered"),
-                ServiceOperationStatus.NotFound => NotFound<string>("Message not found"),
-                _ => BadRequest<string>("Failed to mark message as delivered")
-            };
         }
 
         public async Task<Response<string>> Handle(MarkMessagesAsDeliveredCommand request, CancellationToken cancellationToken) {
