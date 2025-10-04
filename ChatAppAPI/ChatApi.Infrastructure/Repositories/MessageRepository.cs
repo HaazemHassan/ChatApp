@@ -19,6 +19,19 @@ namespace ChatApi.Infrastructure.Repositories {
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Message>> GetConversationMessagesWithDeliveryAsync(int conversationId, int userId, int skip = 0, int take = 50) {
+            return await _dbContext.Messages
+                .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
+                .Include(m => m.Sender)
+                .Include(m => m.ReplyToMessage)
+                    .ThenInclude(r => r.Sender)
+                .Include(m => m.MessageDeliveries.Where(md => md.UserId != userId))
+                .OrderBy(m => m.SentAt)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
+        }
+
         public async Task<Message?> GetMessageWithRepliesAsync(int messageId) {
             return await _dbContext.Messages
                 .Include(m => m.Sender)
@@ -31,6 +44,14 @@ namespace ChatApi.Infrastructure.Repositories {
             return await _dbContext.Messages
                 .Include(m => m.Sender)
                 .Include(m => m.Conversation)
+                .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted);
+        }
+
+        public async Task<Message?> GetMessageWithDeliveryAsync(int messageId, int userId) {
+            return await _dbContext.Messages
+                .Include(m => m.Sender)
+                .Include(m => m.Conversation)
+                .Include(m => m.MessageDeliveries.Where(md => md.UserId == userId))
                 .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted);
         }
     }

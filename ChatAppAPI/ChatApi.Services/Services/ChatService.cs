@@ -15,6 +15,7 @@ namespace ChatApi.Services.Services {
         private readonly IMessageRepository _messageRepository;
         private readonly IConversationParticipantRepository _participantRepository;
         private readonly ITypingIndicatorRepository _typingIndicatorRepository;
+        private readonly IMessageDeliveryRepository _messageDeliveryRepository;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ICurrentUserService _currentUserService;
         private readonly IApplicationUserService _applicationUserService;
@@ -24,6 +25,7 @@ namespace ChatApi.Services.Services {
             IMessageRepository messageRepository,
             IConversationParticipantRepository participantRepository,
             ITypingIndicatorRepository typingIndicatorRepository,
+            IMessageDeliveryRepository messageDeliveryRepository,
             UserManager<ApplicationUser> userManager,
             ICurrentUserService currentUserService,
             IApplicationUserService applicationUserService) {
@@ -31,6 +33,7 @@ namespace ChatApi.Services.Services {
             _messageRepository = messageRepository;
             _participantRepository = participantRepository;
             _typingIndicatorRepository = typingIndicatorRepository;
+            _messageDeliveryRepository = messageDeliveryRepository;
             _userManager = userManager;
             _currentUserService = currentUserService;
             _applicationUserService = applicationUserService;
@@ -83,9 +86,9 @@ namespace ChatApi.Services.Services {
                 await AddParticipantAsync(conversation.Id, participantId, role);
             }
 
-            return ServiceOperationResult<Conversation>.Success(conversation);
-
-
+            // Get the created conversation with details included
+            var createdConversation = await GetConversationByIdAsync(conversation.Id);
+            return ServiceOperationResult<Conversation>.Success(createdConversation);
         }
 
         public async Task<ServiceOperationStatus> AddParticipantAsync(int conversationId, int userId, ConversationParticipantRole role) {
@@ -213,24 +216,109 @@ namespace ChatApi.Services.Services {
             return await _messageRepository.GetConversationMessagesAsync(conversationId, skip, take);
         }
 
+        public async Task<IEnumerable<Message>> GetConversationMessagesWithDeliveryAsync(int conversationId, int userId, int skip = 0, int take = 50) {
+            return await _messageRepository.GetConversationMessagesWithDeliveryAsync(conversationId, userId, skip, take);
+        }
+
         public async Task<ServiceOperationStatus> MarkMessageAsReadAsync(int messageId, int userId) {
-            try {
-                var message = await _messageRepository.GetByIdAsync(messageId);
-                if (message == null)
-                    return ServiceOperationStatus.NotFound;
+            var result = await MarkMessagesAsReadAsync(new List<int> { messageId }, userId);
+            return result.Status;
+        }
+
+        public async Task<ServiceOperationResult<string>> MarkMessagesAsReadAsync(List<int> messageIds, int userId) {
+            if (messageIds == null || !messageIds.Any())
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "Message IDs list cannot be empty");
+
+            var messages = await _messageRepository.GetTableNoTracking()
+                .Where(m => messageIds.Contains(m.Id))
+                .ToListAsync();
+
+            if (!messages.Any())
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "No messages found");
+
+            var participantsToUpdate = new List<ConversationParticipant>();
+            var processedConversations = new HashSet<int>();
+
+            foreach (var message in messages) {
+                // Skip if conversation already processed (optimization for multiple messages in same conversation)
+                if (processedConversations.Contains(message.ConversationId))
+                    continue;
 
                 var participant = await _participantRepository.GetParticipantAsync(message.ConversationId, userId);
                 if (participant == null)
-                    return ServiceOperationStatus.NotFound;
+                    continue;
 
-                participant.LastReadMessageId = messageId;
+                // Find the latest message in this conversation from our list
+                var latestMessageInConversation = messages
+                    .Where(m => m.ConversationId == message.ConversationId)
+                    .OrderByDescending(m => m.SentAt)
+                    .First();
+
+                participant.LastReadMessageId = latestMessageInConversation.Id;
                 participant.LastReadAt = DateTime.UtcNow;
-                await _participantRepository.UpdateAsync(participant);
-                return ServiceOperationStatus.Succeeded;
+                participantsToUpdate.Add(participant);
+                processedConversations.Add(message.ConversationId);
             }
-            catch {
-                return ServiceOperationStatus.Failed;
+
+            if (participantsToUpdate.Any()) {
+                await _participantRepository.UpdateRangeAsync(participantsToUpdate);
             }
+
+            return ServiceOperationResult<string>.Success("Messages marked as read successfully");
+        }
+
+        public async Task<ServiceOperationStatus> MarkMessageAsDeliveredAsync(int messageId, int userId) {
+            var result = await MarkMessagesAsDeliveredAsync(new List<int> { messageId }, userId);
+            return result.Status;
+        }
+
+        public async Task<ServiceOperationResult<string>> MarkMessagesAsDeliveredAsync(List<int> messageIds, int userId) {
+            if (messageIds == null || !messageIds.Any())
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "Message IDs list cannot be empty");
+
+            var messages = await _messageRepository.GetTableNoTracking()
+                .Where(m => messageIds.Contains(m.Id))
+                .ToListAsync();
+
+            if (!messages.Any())
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "No messages found");
+
+            var deliveriesToAdd = new List<MessageDelivery>();
+            var deliveriesToUpdate = new List<MessageDelivery>();
+
+            foreach (var message in messages) {
+                // Skip messages sent by the same user
+                if (message.SenderId == userId)
+                    continue;
+
+                // Check if user is participant in the conversation
+                if (!await (IsUserInConversationAsync(userId, message.ConversationId)))
+                    continue;
+
+                var existingDelivery = await _messageDeliveryRepository.GetUserMessageDeliveryAsync(message.Id, userId);
+
+                if (existingDelivery == null) {
+                    deliveriesToAdd.Add(new MessageDelivery {
+                        MessageId = message.Id,
+                        UserId = userId,
+                        Status = DeliveryStatus.Delivered,
+                        DeliveredAt = DateTime.UtcNow
+                    });
+                }
+                else if (existingDelivery.Status == DeliveryStatus.Sent) {
+                    existingDelivery.Status = DeliveryStatus.Delivered;
+                    existingDelivery.DeliveredAt = DateTime.UtcNow;
+                    deliveriesToUpdate.Add(existingDelivery);
+                }
+            }
+
+            if (deliveriesToAdd.Any())
+                await _messageDeliveryRepository.AddRangeAsync(deliveriesToAdd);
+
+            if (deliveriesToUpdate.Any())
+                await _messageDeliveryRepository.UpdateRangeAsync(deliveriesToUpdate);
+
+            return ServiceOperationResult<string>.Success("Messages marked as delivered successfully");
         }
 
         public async Task<ServiceOperationStatus> UpdateTypingStatusAsync(int conversationId, int userId, bool isTyping) {
@@ -284,6 +372,15 @@ namespace ChatApi.Services.Services {
             }
         }
 
+        public async Task<Message?> GetMessageWithDeliveryAsync(int messageId, int userId) {
+            try {
+                return await _messageRepository.GetMessageWithDeliveryAsync(messageId, userId);
+            }
+            catch {
+                return null;
+            }
+        }
+
         public async Task<Conversation?> GetDirectConversationBetweenUsersAsync(int userId1, int userId2) {
             try {
                 return await _conversationRepository.GetDirectConversationBetweenUsersAsync(userId1, userId2);
@@ -328,6 +425,41 @@ namespace ChatApi.Services.Services {
                 return await _applicationUserService.GetFullName(recipient.UserId);
             }
             return conversation.Title;
+        }
+
+        public async Task<IEnumerable<int>> GetUndeliveredMessageIdsForUserAsync(int userId) {
+            try {
+                // Get all conversations where the user is a participant
+                var userConversations = await GetUserConversationsAsync(userId);
+                var conversationIds = userConversations.Select(c => c.Id).ToList();
+
+                if (!conversationIds.Any())
+                    return new List<int>();
+
+                // Get all messages in user's conversations that were sent by others
+                var messages = await _messageRepository.GetTableNoTracking()
+                    .Where(m => conversationIds.Contains(m.ConversationId)
+                               && m.SenderId != userId
+                               && !m.IsDeleted)
+                    .ToListAsync();
+
+                var undeliveredMessageIds = new List<int>();
+
+                foreach (var message in messages) {
+                    // Check if there's a delivery record for this user
+                    var delivery = await _messageDeliveryRepository.GetUserMessageDeliveryAsync(message.Id, userId);
+
+                    // If no delivery record exists, or the message is still marked as "Sent"
+                    if (delivery == null || delivery.Status == DeliveryStatus.Sent) {
+                        undeliveredMessageIds.Add(message.Id);
+                    }
+                }
+
+                return undeliveredMessageIds;
+            }
+            catch {
+                return new List<int>();
+            }
         }
 
         #endregion

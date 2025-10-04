@@ -10,11 +10,14 @@
   padding: 1rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
   background-color: #f9fafb;
-  min-height: 60px;
+  height: 80px; /* Fixed height instead of min-height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .conversation-title {
-  margin: 0;
+  margin: 0 0 4px 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #111827;
@@ -22,14 +25,58 @@
 
 .online-status-header {
   font-size: 0.825rem;
-  font-weight: 500;
+  font-weight: 700;
+  height: 20px;
+  line-height: 20px;
+  transition: all 0.3s ease-in-out;
+  opacity: 0.8;
+}
+
+.online-status-header.online {
   color: #10b981;
+  opacity: 1;
+  transform: scale(1.02);
+}
+
+.online-status-header.offline {
+  color: #6b7280;
+  opacity: 0.7;
+  transform: scale(0.98);
+}
+
+/* Pulse animation for online status */
+.online-status-header.online::before {
+  content: '●';
+  margin-right: 4px;
+  animation: pulse;
+}
+
+.online-status-header.offline::before {
+  content: '●';
+  margin-right: 4px;
+  opacity: 0.5;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .messages-container {
   display: flex;
   flex-direction: column;
   background-color: #f3f4f6;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .loading-state,
@@ -40,7 +87,7 @@
   align-items: center;
   text-align: center;
   color: #6b7280;
-  height: calc(100vh - 230px);
+  height: calc(100vh - 250px); /* Updated for new header height */
 }
 
 .error-state {
@@ -54,7 +101,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  height: calc(100vh - 230px);
+  height: calc(100vh - 250px); /* Updated for new header height */
 
 }
 
@@ -80,6 +127,9 @@
 .message-wrapper {
   display: flex;
   width: 100%;
+  animation: fadeInUp 0.25s ease-out;
+  opacity: 0;
+  animation-fill-mode: forwards;
 }
 
 .message-wrapper.current-user {
@@ -199,6 +249,27 @@
   font-weight: 400;
 }
 
+.delivery-status {
+  margin-left: 0.25rem;
+}
+
+.status-tick {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-tick.sent {
+  color: #9ca3af; /* Gray color for sent */
+}
+
+.status-tick.delivered {
+  color: #9ca3af; /* Gray color for delivered */
+}
+
+.status-tick.read {
+  color: #3b82f6; /* Blue color for read */
+}
+
 .message-input-container {
   flex-shrink: 0;
   padding: 1rem 1.5rem;
@@ -275,4 +346,25 @@
   height: 20px;
   color: white;
   margin-left: 2px; /* Small adjustment for visual centering */
+}
+
+/* Message animations */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0.3;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }

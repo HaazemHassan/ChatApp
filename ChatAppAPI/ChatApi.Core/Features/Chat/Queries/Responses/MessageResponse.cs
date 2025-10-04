@@ -10,6 +10,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Responses {
         public string Content { get; set; }
         public DateTime SentAt { get; set; }
         public MessageType MessageType { get; set; }
+        public DeliveryStatus DeliveryStatus { get; set; }
 
         //public DateTime? EditedAt { get; set; }
         //public bool IsDeleted { get; set; }

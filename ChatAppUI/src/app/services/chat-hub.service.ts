@@ -71,7 +71,20 @@ export class ChatHubService {
     this.hubConnection.on('UserOnlineStatusChanged', callback);
   }
 
+  //for notifying the server that a message has been delivered to the recipient
+  NotifyMessageDelivered(messageId: number) {
+    return this.hubConnection.invoke('MessageDelivered', messageId);
+  }
 
+  //for single message delivery status update
+  onMessageDelivered(callback: (messageId: number) => void) {
+    this.hubConnection.on('MessageDelivered', callback);
+  }
+
+  //for bulk delivery status updates when offline users connects
+  onMessagesDelivered(callback: (messageIds: number[]) => void) {
+    this.hubConnection.on('MessagesDelivered', callback);
+  }
 
   onError(callback: (error: any) => void) {
     this.hubConnection.on('Error', callback);

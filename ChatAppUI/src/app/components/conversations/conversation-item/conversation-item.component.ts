@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, effect, input, output } from '@angular/core';
 import { UserConversation } from '../../../models/conversations/responses/user-conversations-response';
 import { TimeAgoPipe } from "../../../pipes/time-ago.pipe";
 import { AsyncPipe } from '@angular/common';
@@ -19,9 +19,21 @@ export class ConversationItemComponent {
   selectedConversation = output<UserConversation>();
   ConversationType = ConversationType;
 
+
+  constructor() {
+    effect(() => {
+      const convo = this.conversation();
+      if (convo) {
+        console.log('Conversation changed via effect:', convo);
+      }
+    });
+  }
+
   onSelect() {
-    if (this.conversation())
+    if (this.conversation()) {
       this.selectedConversation.emit(this.conversation());
+    }
+
   }
 
   lastMessagePreview = computed((): string => {

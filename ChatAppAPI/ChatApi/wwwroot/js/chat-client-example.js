@@ -52,6 +52,15 @@ connection.on("ReceiveMessage", function (message) {
     console.log("New message received:", message);
     // Add message to conversation UI
     displayMessage(message);
+    
+    // Automatically mark message as delivered when received
+    markMessageAsDelivered(message.Id);
+});
+
+connection.on("MessageDelivered", function (messageId, userId) {
+    console.log(`Message ${messageId} delivered to user ${userId}`);
+    // Update message delivery status in UI
+    updateMessageDeliveryStatus(messageId, userId);
 });
 
 connection.on("MessageEdited", function (data) {
@@ -123,6 +132,11 @@ function deleteMessage(messageId) {
     connection.invoke("DeleteMessage", messageId);
 }
 
+// Mark message as delivered
+function markMessageAsDelivered(messageId) {
+    connection.invoke("MessageDelivered", messageId);
+}
+
 // Mark message as read
 function markMessageAsRead(messageId) {
     connection.invoke("MarkMessageAsRead", messageId);
@@ -162,6 +176,11 @@ function updateMessageInUI(messageId, newContent, editedAt) {
 function markMessageAsDeletedInUI(messageId) {
     // Implementation depends on your UI framework
     console.log(`Marking message ${messageId} as deleted`);
+}
+
+function updateMessageDeliveryStatus(messageId, userId) {
+    // Implementation depends on your UI framework
+    console.log(`Updating delivery status for message ${messageId} delivered to user ${userId}`);
 }
 
 function showTypingIndicator(conversationId, userId) {

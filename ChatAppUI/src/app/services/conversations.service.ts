@@ -82,6 +82,7 @@ export class ConversationsService {
 
   IsOtherParticipantOnline(participants: Participant[]): boolean {
     const otherParticipant = this.getOtherParticipantInDirectConversation(participants);
+    console.log(otherParticipant)
     return otherParticipant ? otherParticipant.isOnline : false;
   }
 

@@ -1,3 +1,4 @@
+import { DeliveryStatus } from "../../../enums/delivery-status";
 import { MessageType } from "../../../enums/message-type";
 
 export interface ConversationMessagesResponse {
@@ -15,5 +16,6 @@ export interface MessageResponse {
   content: string;
   sentAt: string;
   messageType: MessageType;
+  deliveryStatus: DeliveryStatus;
 
 }

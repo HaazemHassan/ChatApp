@@ -13,7 +13,6 @@ export interface UserConversation {
   id?: number;
   title: string;
   type: ConversationType;
-  // lastMessageAt: string | null;
   participants: Participant[];
   lastMessage: MessageResponse | null;
 }

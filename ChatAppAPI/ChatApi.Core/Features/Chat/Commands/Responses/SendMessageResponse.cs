@@ -1,3 +1,5 @@
+using ChatApi.Core.Enums.ChatEnums;
+
 namespace ChatApi.Core.Features.Chat.Commands.Responses {
     public class SendMessageResponse {
         public int Id { get; set; }
@@ -7,8 +9,9 @@ namespace ChatApi.Core.Features.Chat.Commands.Responses {
         public string SenderFullName { get; set; }
         public string Content { get; set; }
         public DateTime SentAt { get; set; }
+        public MessageType MessageType { get; set; }
+        public DeliveryStatus DeliveryStatus { get; set; }
 
-        //public MessageType MessageType { get; set; }
         //public int? ReplyToMessageId { get; set; }
     }
 }

@@ -27,6 +27,7 @@ import { FormatMessageTimePipe } from "../../../pipes/format-message-time.pipe";
 import { StringInitialsPipe } from "../../../pipes/string-initials.pipe";
 import { MessageType } from "../../../enums/message-type";
 import { ConversationType } from '../../../enums/conversation-type';
+import { DeliveryStatus } from '../../../enums/delivery-status';
 
 
 
@@ -43,12 +44,11 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   error: string | null = null;
   private shouldScrollToBottom = false;
   currentUserId: number | null = null;
+  prevConversationId: number | null = null;
 
-  // Make MessageType available in template
   MessageType = MessageType;
-
-  // Make ConversationType available in template
   ConversationType = ConversationType;
+  DeliveryStatus = DeliveryStatus;
 
   conversation = input.required<UserConversation>();
   newMessage = input<MessageResponse | null>(null);
@@ -61,16 +61,27 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
     private chatHubService: ChatHubService,
     private authService: AuthenticationService
   ) {
+
     effect(() => {
-      if (this.conversation().id)
+      const id = this.conversation().id;
+      if (id && id !== this.prevConversationId) {
+        this.prevConversationId = id;
         this.loadMessages();
-      else
-        this.messages = [];
+      }
     });
 
     effect(() => {
-      if (this.newMessage() !== null) {
-        this.messages = [...this.messages, this.newMessage()!];
+      const newMsg = this.newMessage();
+      if (newMsg !== null) {
+        const existingMessageIndex = this.messages.findIndex(m => m.id === newMsg.id);
+
+        if (existingMessageIndex !== -1) {
+          this.messages = this.messages.map((message, index) =>
+            index === existingMessageIndex ? newMsg : message
+          );
+        } else {
+          this.messages = [...this.messages, newMsg];
+        }
         this.scrollToBottom(true);
       }
     });
@@ -80,9 +91,12 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
 
 
   ngOnInit(): void {
-
     this.currentUserId = this.authService.getCurrentUserId();
 
+    // Listen for bulk message delivery status updates
+    this.chatHubService.onMessagesDelivered((messageIds: number[]) => {
+      this.updateMessagesDeliveryStatus(messageIds);
+    });
   }
 
 
@@ -98,9 +112,9 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
       .subscribe({
         next: (response: ConversationMessagesResponse) => {
           this.messages = response.messages || [];
-
           this.loading = false;
           this.shouldScrollToBottom = true;
+
         },
         error: (err) => {
           this.error = 'Failed to load messages';
@@ -141,11 +155,11 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   }
 
   isOnline = computed(() => {
+    console.log('Checking online status for conversation:', this.conversation());
     if (this.conversation().type === ConversationType.Direct)
       return this.conversationsService.IsOtherParticipantOnline(this.conversation().participants);
     return null;   // For group conversations, online status is not applicable
   });
-
 
 
   //helpers
@@ -164,6 +178,18 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
     } catch (err) {
       console.error('Error scrolling to bottom:', err);
     }
+  }
+
+  private updateMessagesDeliveryStatus(messageIds: number[]): void {
+    this.messages = this.messages.map(message => {
+      if (messageIds.includes(message.id) && message.senderId === this.currentUserId) {
+        return {
+          ...message,
+          deliveryStatus: DeliveryStatus.Delivered
+        };
+      }
+      return message;
+    });
   }
 
 }

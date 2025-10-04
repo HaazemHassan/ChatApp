@@ -18,7 +18,7 @@ namespace ChatApi.Core.Entities.ChatEntities {
         public DateTime? ReadAt { get; set; }
 
         [Required]
-        public DeliveryStatus Status { get; set; } = DeliveryStatus.Sent;
+        public DeliveryStatus Status { get; set; }
 
         // Navigation Properties
         [ForeignKey(nameof(MessageId))]

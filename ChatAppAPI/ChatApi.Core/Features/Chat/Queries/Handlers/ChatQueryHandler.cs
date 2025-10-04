@@ -57,7 +57,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
             if (conversation == null)
                 return NotFound<GetConversationMessagesResponse>("Conversation not found");
 
-            var messages = await _chatService.GetConversationMessagesAsync(request.ConversationId, request.Skip, request.Take);
+            var messages = await _chatService.GetConversationMessagesWithDeliveryAsync(request.ConversationId, currentUserId, request.Skip, request.Take);
             var messageResponses = _mapper.Map<IEnumerable<MessageResponse>>(messages);
 
             var response = new GetConversationMessagesResponse {
@@ -152,6 +152,10 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
 
     }
 }
+
+
+
+
 
 
 

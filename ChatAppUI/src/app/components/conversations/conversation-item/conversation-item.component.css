@@ -23,8 +23,7 @@
 
 .item.selected {
   background: #e0f2fe;
-  border-left: 3px solid #0ea5e9;
-  padding-left: 13px;
+  padding-left: 20px;
 }
 
 .item.selected:hover {

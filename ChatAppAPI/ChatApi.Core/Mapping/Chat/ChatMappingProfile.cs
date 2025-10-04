@@ -1,5 +1,6 @@
 using AutoMapper;
 using ChatApi.Core.Entities.ChatEntities;
+using ChatApi.Core.Enums.ChatEnums;
 using ChatApi.Core.Features.Chat.Commands.RequestsModels;
 using ChatApi.Core.Features.Chat.Commands.Responses;
 using ChatApi.Core.Features.Chat.Queries.Responses;
@@ -16,7 +17,11 @@ namespace ChatApi.Core.Mapping.Chat {
 
             CreateMap<Message, SendMessageResponse>()
                 .ForMember(dest => dest.SenderName, opt => opt.MapFrom(src => src.Sender != null ? src.Sender.UserName : ""))
-                .ForMember(dest => dest.SenderFullName, opt => opt.MapFrom(src => src.Sender != null ? src.Sender.FullName : ""));
+                .ForMember(dest => dest.SenderFullName, opt => opt.MapFrom(src => src.Sender != null ? src.Sender.FullName : ""))
+                .ForMember(dest => dest.DeliveryStatus, opt => opt.MapFrom(src => 
+                    src.MessageDeliveries.FirstOrDefault() != null ? 
+                    src.MessageDeliveries.FirstOrDefault().Status : 
+                    DeliveryStatus.Sent));
 
 
 
@@ -42,7 +47,11 @@ namespace ChatApi.Core.Mapping.Chat {
 
             CreateMap<Message, MessageResponse>()
                 .ForMember(dest => dest.SenderName, opt => opt.MapFrom(src => src.Sender.UserName))
-                .ForMember(dest => dest.SenderFullName, opt => opt.MapFrom(src => src.Sender.FullName));
+                .ForMember(dest => dest.SenderFullName, opt => opt.MapFrom(src => src.Sender.FullName))
+                .ForMember(dest => dest.DeliveryStatus, opt => opt.MapFrom(src => 
+                    src.MessageDeliveries.FirstOrDefault() != null ? 
+                    src.MessageDeliveries.FirstOrDefault().Status : 
+                    DeliveryStatus.Sent));
             //.ForMember(dest => dest.IsRead, opt => opt.Ignore())
             //.ForMember(dest => dest.Replies, opt => opt.Ignore());
 

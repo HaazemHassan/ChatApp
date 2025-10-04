@@ -35,13 +35,14 @@ namespace ChatApi.Hubs {
                     await Groups.AddToGroupAsync(Context.ConnectionId, $"Conversation_{convo.Id}");
 
                 }
+
+                // Handle undelivered messages when user connects
+                await HandleUndeliveredMessagesOnConnectionAsync(userId.Value);
+
                 if (!isOnlineBeforeAddConnection) {
                     foreach (var con in response.Data)
                         await Clients.OthersInGroup($"Conversation_{con.Id}").SendAsync("UserOnlineStatusChanged", userId, true);
                 }
-
-
-
             }
             await base.OnConnectedAsync();
         }
@@ -68,15 +69,6 @@ namespace ChatApi.Hubs {
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task JoinConversation(int conversationId) {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"Conversation_{conversationId}");
-            await _connectionService.AddToGroupAsync(Context.ConnectionId, conversationId);
-        }
-
-        public async Task LeaveConversation(int conversationId) {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Conversation_{conversationId}");
-            await _connectionService.RemoveFromGroupAsync(Context.ConnectionId, $"Conversation_{conversationId}");
-        }
         #endregion
 
         #region Conversation Management
@@ -177,6 +169,16 @@ namespace ChatApi.Hubs {
                 await Clients.Caller.SendAsync("Error", response.Message);
             }
         }
+
+        public async Task JoinConversation(int conversationId) {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"Conversation_{conversationId}");
+            await _connectionService.AddToGroupAsync(Context.ConnectionId, conversationId);
+        }
+
+        public async Task LeaveConversation(int conversationId) {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Conversation_{conversationId}");
+            await _connectionService.RemoveFromGroupAsync(Context.ConnectionId, $"Conversation_{conversationId}");
+        }
         #endregion
 
         #region Message Management
@@ -193,36 +195,61 @@ namespace ChatApi.Hubs {
             }
         }
 
-        public async Task EditMessage(int messageId, string newContent) {
-            var command = new EditMessageCommand {
-                MessageId = messageId,
-                NewContent = newContent
+
+        public async Task MessageDelivered(int messageId) {
+            var command = new MarkMessageAsDeliveredCommand {
+                MessageId = messageId
             };
 
             var response = await _mediator.Send(command);
 
             if (response.Succeeded) {
-                // Note: We need to get conversation ID to target the right group
-                // This should be improved by returning more data from the command
-                await Clients.All.SendAsync("MessageEdited", new {
-                    MessageId = messageId,
-                    NewContent = newContent,
-                    EditedAt = DateTime.UtcNow
-                });
+                var userId = _currentUserService.UserId!.Value;
+
+                var message = await _chatService.GetMessageWithSenderAsync(messageId);
+                if (message != null && message.SenderId != userId) {
+                    var senderConnections = await _connectionService.GetUserConnectionsAsync(message.SenderId.Value);
+                    await Clients.Clients(senderConnections)
+                        .SendAsync("MessageDelivered", messageId, userId);
+                }
             }
             else {
                 await Clients.Caller.SendAsync("Error", response.Message);
             }
         }
 
-        public async Task DeleteMessage(int messageId) {
-            var command = new DeleteMessageCommand { MessageId = messageId };
+        public async Task MessagesDelivered(List<int> messageIds) {
+            var command = new MarkMessagesAsDeliveredCommand {
+                MessageIds = messageIds
+            };
 
             var response = await _mediator.Send(command);
 
             if (response.Succeeded) {
-                // Note: Should target specific conversation
-                await Clients.All.SendAsync("MessageDeleted", messageId);
+                var userId = _currentUserService.UserId!.Value;
+
+                var senderNotifications = new Dictionary<int, List<int>>(); // SenderId -> List of MessageIds
+
+                foreach (var messageId in messageIds) {
+                    var message = await _chatService.GetMessageWithSenderAsync(messageId);
+
+                    if (message?.SenderId != null && message.SenderId != userId) {
+                        int senderId = message.SenderId.Value;
+                        if (!senderNotifications.ContainsKey(senderId))
+                            senderNotifications[senderId] = new List<int>();
+                        senderNotifications[senderId].Add(messageId);
+                    }
+                }
+
+                // Notify each sender about their delivered messages
+                foreach (var senderNotification in senderNotifications) {
+                    var senderId = senderNotification.Key;
+                    var deliveredMessageIds = senderNotification.Value;
+
+                    var senderConnections = await _connectionService.GetUserConnectionsAsync(senderId);
+                    await Clients.Clients(senderConnections)
+                        .SendAsync("MessagesDelivered", deliveredMessageIds);
+                }
             }
             else {
                 await Clients.Caller.SendAsync("Error", response.Message);
@@ -241,54 +268,69 @@ namespace ChatApi.Hubs {
                 await Clients.All.SendAsync("MessageRead", messageId, userId);
             }
         }
-        #endregion
 
-        #region Typing Indicators
-        public async Task StartTyping(int conversationId) {
-            var command = new UpdateTypingStatusCommand {
-                ConversationId = conversationId,
-                IsTyping = true
+        public async Task MarkMessagesAsRead(List<int> messageIds) {
+            if (messageIds == null || !messageIds.Any()) {
+                await Clients.Caller.SendAsync("Error", "Message IDs list cannot be empty");
+                return;
+            }
+
+            var command = new MarkMultipleMessagesAsReadCommand {
+                MessageIds = messageIds
             };
 
             var response = await _mediator.Send(command);
 
             if (response.Succeeded) {
                 var userId = _currentUserService.UserId!.Value;
-                await Clients.OthersInGroup($"Conversation_{conversationId}")
-                    .SendAsync("UserStartedTyping", conversationId, userId);
+
+                // Get message details to notify the senders
+                var senderNotifications = new Dictionary<int, List<int>>(); // SenderId -> List of MessageIds
+
+                foreach (var messageId in messageIds) {
+                    var message = await _chatService.GetMessageWithSenderAsync(messageId);
+                    if (message?.SenderId != null && message.SenderId != userId) {
+                        if (!senderNotifications.ContainsKey(message.SenderId.Value)) {
+                            senderNotifications[message.SenderId.Value] = new List<int>();
+                        }
+                        senderNotifications[message.SenderId.Value].Add(messageId);
+                    }
+                }
+
+                // Notify each sender about their read messages
+                foreach (var senderNotification in senderNotifications) {
+                    var senderId = senderNotification.Key;
+                    var readMessageIds = senderNotification.Value;
+
+                    var senderConnections = await _connectionService.GetUserConnectionsAsync(senderId);
+                    await Clients.Clients(senderConnections)
+                        .SendAsync("MessagesRead", readMessageIds, userId);
+                }
             }
-        }
-
-        public async Task StopTyping(int conversationId) {
-            var command = new UpdateTypingStatusCommand {
-                ConversationId = conversationId,
-                IsTyping = false
-            };
-
-            var response = await _mediator.Send(command);
-
-            if (response.Succeeded) {
-                var userId = _currentUserService.UserId!.Value;
-                await Clients.OthersInGroup($"Conversation_{conversationId}")
-                    .SendAsync("UserStoppedTyping", conversationId, userId);
+            else {
+                await Clients.Caller.SendAsync("Error", response.Message);
             }
         }
         #endregion
 
-        #region Helper Methods
-        //private int GetCurrentUserId() {
-        //    var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //    return int.TryParse(userIdClaim, out var userId) ? userId : 0;
-        //}
 
-        private async Task AddAllUserConnectionsToGroup(int userId, string groupName) {
-            var userConnections = await _connectionService.GetUserConnectionsAsync(userId);
-            foreach (var connectionId in userConnections)
-                await Groups.AddToGroupAsync(connectionId, groupName);
+        #region Helpres
+        private async Task HandleUndeliveredMessagesOnConnectionAsync(int userId) {
+            try {
+                var undeliveredMessageIds = await _chatService.GetUndeliveredMessageIdsForUserAsync(userId);
+                if (!undeliveredMessageIds.Any()) {
+                    return;
+                }
+
+                await MessagesDelivered(undeliveredMessageIds.ToList());
+            }
+            catch (Exception ex) {
+                // Log the error but don't break the connection process
+                // TODO: Add proper logging
+                Console.WriteLine($"Error handling undelivered messages: {ex.Message}");
+            }
         }
+        #endregion
     }
-
-
-    #endregion
 }
 

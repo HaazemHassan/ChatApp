@@ -2,8 +2,14 @@
   <!-- Header -->
   <div class="conversation-header">
     <h2 class="conversation-title">{{ conversation().title }}</h2>
-    @if (conversation().type === ConversationType.Direct && isOnline()) {
-    <div class="online-status-header">online</div>
+    @if (conversation().type === ConversationType.Direct) {
+    <div
+      class="online-status-header"
+      [class.online]="isOnline()"
+      [class.offline]="!isOnline()"
+    >
+      {{ isOnline() ? "Online" : "Offline" }}
+    </div>
     }
   </div>
 
@@ -11,7 +17,7 @@
   <div class="messages-container">
     @if (loading) {
     <div class="loading-state">
-      <p>Loading messages...</p>
+      <!-- <p>Loading messages...</p> -->
     </div>
     } @if (error) {
     <div class="error-state">
@@ -26,7 +32,7 @@
     <!-- Messages List -->
     @if (!loading && !error && messages.length > 0) {
     <div #messagesList class="messages-list">
-      @for (message of messages; track message.id) {
+      @for (message of messages; track message.id; let i = $index) {
       <div
         class="message-wrapper"
         [class.current-user]="
@@ -62,6 +68,17 @@
             <span class="message-time">{{
               message.sentAt | formatMessageTime
             }}</span>
+            } @if (message.senderId === this.currentUserId &&
+            message.messageType !== MessageType.System) {
+            <span class="delivery-status">
+              @if (message.deliveryStatus === DeliveryStatus.Sent) {
+              <span class="status-tick sent">✓</span>
+              } @else if (message.deliveryStatus === DeliveryStatus.Delivered) {
+              <span class="status-tick delivered">✓✓</span>
+              } @else if (message.deliveryStatus === DeliveryStatus.Read) {
+              <span class="status-tick read">✓✓</span>
+              }
+            </span>
             }
           </div>
         </div>

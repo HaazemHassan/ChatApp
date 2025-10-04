@@ -11,6 +11,7 @@ import { ConversationWindowComponent } from './conversation-window/conversation-
 import { AuthenticationService } from '../../services/authentication.service';
 import { ChatHubService } from '../../services/chat-hub.service';
 import { ConversationType } from '../../enums/conversation-type';
+import { DeliveryStatus } from '../../enums/delivery-status';
 import { User } from '../../models/interfaces/userInterface';
 @Component({
   selector: 'app-conversations',
@@ -53,15 +54,24 @@ export class ConversationsComponent implements OnInit {
     });
 
     this.chatHubService.onNewDirectConversationInfo((newConversation: UserConversation) => {
+      console.log('Received new direct conversation info via SignalR:', newConversation);
       this.handleNewDirectConversationInfoReceived(newConversation);
     });
 
     this.chatHubService.onReceiveMessage((message: MessageResponse) => {
+      if (message.senderId !== this.authService.getCurrentUser()?.id)
+        this.chatHubService.NotifyMessageDelivered(message.id).catch(err => {
+          console.error('Error notifying message delivered:', err);
+        });
       this.handleMessageReceived(message);
     });
 
     this.chatHubService.onUserOnlineStatusChanged((userId: number, isOnline: boolean) => {
       this.handleUserOnlineStatusChange(userId, isOnline);
+    });
+
+    this.chatHubService.onMessageDelivered((messageId: number) => {
+      this.handleMessageDelivered(messageId);
     });
   }
 
@@ -151,6 +161,40 @@ export class ConversationsComponent implements OnInit {
     );
   }
 
+  private handleMessageDelivered(messageId: number): void {
+    for (let conversation of this.conversations) {
+      if (conversation.lastMessage && conversation.lastMessage.id === messageId) {
+        if (conversation.lastMessage.deliveryStatus === DeliveryStatus.Sent) {
+          const updatedLastMessage = {
+            ...conversation.lastMessage,
+            deliveryStatus: DeliveryStatus.Delivered
+          };
+          const updatedConversation = {
+            ...conversation,
+            lastMessage: updatedLastMessage
+          };
+
+          this.conversations = this.conversations.map(conv =>
+            conv.id === conversation.id ? updatedConversation : conv
+          );
+
+          console.log(`Last message ${messageId} in conversation ${conversation.id} updated to Delivered`);
+        }
+        break;
+      }
+    }
+
+    // Also update the newMessage if it matches
+    if (this.newMessage && this.newMessage.id === messageId &&
+      this.newMessage.deliveryStatus === DeliveryStatus.Sent) {
+      this.newMessage = {
+        ...this.newMessage,
+        deliveryStatus: DeliveryStatus.Delivered
+      };
+      console.log(`New message ${messageId} updated to Delivered`);
+    }
+  }
+
 
 
 
@@ -175,6 +219,7 @@ export class ConversationsComponent implements OnInit {
     this.conversationsService.getOtherConversations(searchValue).subscribe({
       next: (conversation) => {
         this.others = [conversation];
+        console.log('Fetched other conversation in conversations component:', this.others);
       },
       error: (error) => {
         console.log('User not found or error occurred:', error);
