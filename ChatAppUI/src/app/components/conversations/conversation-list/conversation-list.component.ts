@@ -29,8 +29,11 @@ export class ConversationListComponent {
 
   searchValue: string = '';
   error: string | null = null;
+  isListAnimating = false;
+  isOthersAnimating = false;
 
   private searchSubject = new Subject();
+  private previousConversationsLength = 0;
 
   constructor(private destroyRef: DestroyRef, private authService: AuthenticationService) {
     this.searchSubject.pipe(
@@ -43,6 +46,12 @@ export class ConversationListComponent {
 
     effect(() => {
       this.filterConversations();
+      const currentLength = this.conversations().length;
+      // Trigger animation only when length changes (add/remove)
+      if (currentLength !== this.previousConversationsLength)
+        this.triggerListAnimation();
+      this.previousConversationsLength = currentLength;
+
     });
   }
 
@@ -88,5 +97,14 @@ export class ConversationListComponent {
       return selected?.id ? selected?.id === conv.id : selected === conv;
     };
   });
+
+  private triggerListAnimation() {
+    this.isListAnimating = true;
+    setTimeout(() => {
+      this.isListAnimating = false;
+    }, 400); // Match animation duration
+  }
+
+
 }
 

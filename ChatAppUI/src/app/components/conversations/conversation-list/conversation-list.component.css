@@ -128,6 +128,27 @@
   max-width: 500px;
   margin: 0 auto;
   padding: 0 16px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Animation when list updates */
+.list.updating {
+  animation: listUpdate 0.4s ease-out;
+}
+
+@keyframes listUpdate {
+  0% {
+    opacity: 0.5;
+    transform: translateY(-5px) scale(0.98);
+  }
+  50% {
+    opacity: 0.75;
+    transform: translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .others-list {

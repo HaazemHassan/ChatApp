@@ -251,23 +251,25 @@
 
 .delivery-status {
   margin-left: 0.25rem;
+  min-width: 18px; /* Fixed minimum width to accommodate double ticks */
 }
 
 .status-tick {
   font-size: 0.75rem;
   font-weight: 600;
+  min-width: 18px;
 }
 
 .status-tick.sent {
-  color: #9ca3af; /* Gray color for sent */
+  color: #9ca3af;
 }
 
 .status-tick.delivered {
-  color: #9ca3af; /* Gray color for delivered */
+  color: #9ca3af;
 }
 
 .status-tick.read {
-  color: #3b82f6; /* Blue color for read */
+  color: #3b82f6;
 }
 
 .message-input-container {

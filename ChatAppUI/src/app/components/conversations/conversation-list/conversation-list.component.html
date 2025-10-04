@@ -37,7 +37,7 @@
     @if (filteredConversations.length > 0) {
     <div class="section">
       <div class="section-title">Your Conversations</div>
-      <div class="list">
+      <div class="list" [class.updating]="isListAnimating">
         @for (c of filteredConversations; track c.id) {
         <app-conversation-item
           [conversation]="c"
