@@ -12,13 +12,15 @@ namespace ChatApi.Hubs {
     public class ChatHub : Hub {
         private readonly IConnectionService _connectionService;
         private readonly IMediator _mediator;
-        private readonly IChatService _chatService;
+        private readonly IMessagesService _messagesService;
+        private readonly IConversationsService _conversationsService;
         private readonly ICurrentUserService _currentUserService;
 
-        public ChatHub(IConnectionService connectionService, IMediator mediator, IChatService chatService, ICurrentUserService currentUserService) {
+        public ChatHub(IConnectionService connectionService, IMediator mediator, IMessagesService messagesService, IConversationsService conversationsService, ICurrentUserService currentUserService) {
             _connectionService = connectionService;
             _mediator = mediator;
-            _chatService = chatService;
+            _messagesService = messagesService;
+            _conversationsService = conversationsService;
             _currentUserService = currentUserService;
         }
 
@@ -60,7 +62,7 @@ namespace ChatApi.Hubs {
 
             var isOnlineAfterRemoveConnection = await _currentUserService.IsOnline();
             if (isOnlineAfterRemoveConnection) {
-                var userConversations = await _chatService.GetUserConversationsAsync(userId.Value);
+                var userConversations = await _conversationsService.GetUserConversationsAsync(userId.Value);
                 foreach (var con in userConversations)
                     await Clients.OthersInGroup($"Conversation_{con.Id}").SendAsync("UserOnlineStatusChanged", userId, false);
 
@@ -209,11 +211,11 @@ namespace ChatApi.Hubs {
                 var senderNotifications = new Dictionary<int, List<int>>(); // SenderId -> List of MessageIds
 
                 foreach (var messageId in messageIds) {
-                    var message = await _chatService.GetMessageWithSenderAsync(messageId);
+                    var message = await _messagesService.GetMessageWithSenderAsync(messageId);
 
                     if (message?.SenderId != null && message.SenderId != userId) {
                         // Check if all participants have received the message
-                        if (await _chatService.AreAllParticipantsDeliveredAsync(message, DeliveryStatus.Delivered)) {
+                        if (await _messagesService.AreAllParticipantsDeliveredAsync(message, DeliveryStatus.Delivered)) {
                             int senderId = message.SenderId.Value;
                             if (!senderNotifications.ContainsKey(senderId))
                                 senderNotifications[senderId] = new List<int>();
@@ -256,10 +258,10 @@ namespace ChatApi.Hubs {
                 var senderNotifications = new Dictionary<int, List<int>>(); // SenderId -> List of MessageIds
 
                 foreach (var messageId in messageIds) {
-                    var message = await _chatService.GetMessageWithSenderAsync(messageId);
+                    var message = await _messagesService.GetMessageWithSenderAsync(messageId);
                     if (message?.SenderId != null && message.SenderId != userId) {
                         // Check if all participants have read the message
-                        if (await _chatService.AreAllParticipantsDeliveredAsync(message, DeliveryStatus.Read)) {
+                        if (await _messagesService.AreAllParticipantsDeliveredAsync(message, DeliveryStatus.Read)) {
                             if (!senderNotifications.ContainsKey(message.SenderId.Value)) {
                                 senderNotifications[message.SenderId.Value] = new List<int>();
                             }
@@ -288,7 +290,7 @@ namespace ChatApi.Hubs {
         #region Helpers
         private async Task HandleUndeliveredMessagesOnConnectionAsync(int userId) {
             try {
-                var undeliveredMessageIds = await _chatService.GetUndeliveredMessageIdsForUserAsync(userId);
+                var undeliveredMessageIds = await _messagesService.GetUndeliveredMessageIdsForUserAsync(userId);
                 if (!undeliveredMessageIds.Any()) {
                     return;
                 }

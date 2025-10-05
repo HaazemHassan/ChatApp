@@ -1,4 +1,5 @@
 ﻿using ChatApi.Core.Abstracts.ServicesContracts;
+using ChatApi.Core.Bases;
 using ChatApi.Core.Entities.IdentityEntities;
 using ChatApi.Core.Enums;
 using ChatApi.Infrastructure.Data;
@@ -32,35 +33,35 @@ namespace ChatApi.Services.Services {
             return user is null ? false : true;
         }
 
-        public async Task<ServiceOperationStatus> AddApplicationUser(ApplicationUser user, string password) {
+        public async Task<ServiceOperationResult<string?>> AddApplicationUser(ApplicationUser user, string password) {
 
             if (user is null || password is null)
-                return ServiceOperationStatus.InvalidParameters;
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "User or password is invalid");
 
 
             await using (var transaction = await _dbContext.Database.BeginTransactionAsync()) {
                 try {
                     if (await IsUserExist(x => x.Email == user.Email || x.UserName == user.UserName))
-                        return ServiceOperationStatus.AlreadyExists;
+                        return ServiceOperationResult<string>.Failure(ServiceOperationStatus.AlreadyExists, "Email or username already exists");
 
                     var createResult = await _userManager.CreateAsync(user, password);
 
                     if (!createResult.Succeeded)
-                        return ServiceOperationStatus.Failed;
+                        return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, "Failed to create user");
 
                     var addToRoleresult = await _userManager.AddToRoleAsync(user, ApplicationUserRole.User.ToString());
                     if (!addToRoleresult.Succeeded)
-                        return ServiceOperationStatus.Failed;
+                        return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, "Failed to assign user role");
 
                     //var succedded = await SendConfirmationEmailAsync(user);
                     //if (!succedded)
                     //    return ServiceOperationResult.Failed;
                     await transaction.CommitAsync();
-                    return ServiceOperationStatus.Succeeded;
+                    return ServiceOperationResult<string>.Success("User created successfully");
                 }
-                catch (Exception) {
+                catch (Exception ex) {
                     await transaction.RollbackAsync();
-                    return ServiceOperationStatus.Failed;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, $"An error occurred: {ex.Message}");
 
                 }
             }
@@ -80,25 +81,27 @@ namespace ChatApi.Services.Services {
         //    return sendResult;
         //}
 
-        public async Task<ServiceOperationStatus> ConfirmEmailAsync(int userId, string code) {
+        public async Task<ServiceOperationResult<string?>> ConfirmEmailAsync(int userId, string code) {
             if (code is null)
-                return ServiceOperationStatus.InvalidParameters;
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "Confirmation code is required");
 
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user is null)
-                return ServiceOperationStatus.NotFound;
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "User not found");
 
             if (user.EmailConfirmed)
-                return ServiceOperationStatus.Failed;
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, "Email already confirmed");
 
             var confirmEmail = await _userManager.ConfirmEmailAsync(user, code);
-            return confirmEmail.Succeeded ? ServiceOperationStatus.Succeeded : ServiceOperationStatus.Failed;
+            return confirmEmail.Succeeded 
+                ? ServiceOperationResult<string>.Success("Email confirmed successfully")
+                : ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, "Failed to confirm email");
 
         }
 
-        public async Task<ServiceOperationStatus> ResetPasswordAsync(ApplicationUser? user, string newPassword) {
+        public async Task<ServiceOperationResult<string?>> ResetPasswordAsync(ApplicationUser? user, string newPassword) {
             if (user is null || newPassword is null)
-                return ServiceOperationStatus.InvalidParameters;
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "User or password is invalid");
 
             await using var trans = await _dbContext.Database.BeginTransactionAsync();
             try {
@@ -106,15 +109,15 @@ namespace ChatApi.Services.Services {
                 var result = await _userManager.AddPasswordAsync(user, newPassword);
                 if (!result.Succeeded) {
                     await trans.RollbackAsync();
-                    return ServiceOperationStatus.Failed;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, "Failed to reset password");
                 }
 
                 await trans.CommitAsync();
-                return ServiceOperationStatus.Succeeded;
+                return ServiceOperationResult<string>.Success("Password reset successfully");
             }
-            catch {
+            catch (Exception ex) {
                 await trans.RollbackAsync();
-                return ServiceOperationStatus.Failed;
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, $"An error occurred: {ex.Message}");
 
             }
 

@@ -18,19 +18,19 @@ namespace ChatApi.Core.Features.Connection.Commands.Handlers {
 
         public async Task<Response<string>> Handle(AddUserConnectionCommand request, CancellationToken cancellationToken) {
             var result = await _connectionService.AddUserConnectionAsync(request.UserId, request.ConnectionId);
-            return result switch {
+            return result.Status switch {
                 ServiceOperationStatus.Succeeded => Success("Connection added successfully"),
                 ServiceOperationStatus.AlreadyExists => BadRequest<string>("Connection already exists"),
-                _ => BadRequest<string>("Failed to add connection")
+                _ => BadRequest<string>(result.ErrorMessage ?? "Failed to add connection")
             };
         }
 
         public async Task<Response<string>> Handle(RemoveUserConnectionCommand request, CancellationToken cancellationToken) {
             var result = await _connectionService.RemoveUserConnectionAsync(request.ConnectionId);
-            return result switch {
+            return result.Status switch {
                 ServiceOperationStatus.Succeeded => Success("Connection removed successfully"),
                 ServiceOperationStatus.NotFound => NotFound<string>("Connection not found"),
-                _ => BadRequest<string>("Failed to remove connection")
+                _ => BadRequest<string>(result.ErrorMessage ?? "Failed to remove connection")
             };
         }
 
@@ -40,10 +40,10 @@ namespace ChatApi.Core.Features.Connection.Commands.Handlers {
                 var conversationIdStr = request.GroupName.Replace("Conversation_", "");
                 if (int.TryParse(conversationIdStr, out var conversationId)) {
                     var result = await _connectionService.AddToGroupAsync(request.ConnectionId, conversationId);
-                    return result switch {
+                    return result.Status switch {
                         ServiceOperationStatus.Succeeded => Success("Joined group successfully"),
                         ServiceOperationStatus.AlreadyExists => BadRequest<string>("Already in group"),
-                        _ => BadRequest<string>("Failed to join group")
+                        _ => BadRequest<string>(result.ErrorMessage ?? "Failed to join group")
                     };
                 }
             }

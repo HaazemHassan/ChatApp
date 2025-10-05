@@ -10,7 +10,8 @@ namespace ChatApi.Services {
             services.AddTransient<IAuthenticationService, AuthenticationService>();
             
             // Chat services
-            services.AddTransient<IChatService, ChatService>();
+            services.AddTransient<IMessagesService, MessagesService>();
+            services.AddTransient<IConversationsService, ConversationsService>();
             services.AddTransient<IConnectionService, ConnectionService>();
             
             // Current user service

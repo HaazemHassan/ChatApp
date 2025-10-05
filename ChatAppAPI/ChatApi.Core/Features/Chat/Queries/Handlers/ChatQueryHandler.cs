@@ -15,13 +15,15 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
         IRequestHandler<GetNewConversationQuery, Response<GetNewConversationResponse>>,
         IRequestHandler<GetTypingIndicatorsQuery, Response<IEnumerable<GetTypingIndicatorsResponse>>> {
 
-        private readonly IChatService _chatService;
+        private readonly IMessagesService _messagesService;
+        private readonly IConversationsService _conversationsService;
         private readonly ICurrentUserService _currentUserService;
         private readonly IMapper _mapper;
         private IApplicationUserService _applicationUserService;
 
-        public ChatQueryHandler(IChatService chatService, ICurrentUserService currentUserService, IMapper mapper, IApplicationUserService applicationUserService) {
-            _chatService = chatService;
+        public ChatQueryHandler(IMessagesService messagesService, IConversationsService conversationsService, ICurrentUserService currentUserService, IMapper mapper, IApplicationUserService applicationUserService) {
+            _messagesService = messagesService;
+            _conversationsService = conversationsService;
             _currentUserService = currentUserService;
             _mapper = mapper;
             _applicationUserService = applicationUserService;
@@ -33,15 +35,15 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
 
             var currentUserId = _currentUserService.UserId.Value;
 
-            var conversations = await _chatService.GetUserConversationsAsync(currentUserId);
+            var conversations = await _conversationsService.GetUserConversationsAsync(currentUserId);
             var conversationResponses = _mapper.Map<IEnumerable<GetUserConversationsResponse>>(conversations);
 
             foreach (var conversationResponse in conversationResponses) {
-                conversationResponse.Title = await _chatService.GetConversationTitle(conversationResponse.Id);
-                var lastMessage = await _chatService.GetLastMessageInConversationAsync(conversationResponse.Id);
+                conversationResponse.Title = await _conversationsService.GetConversationTitle(conversationResponse.Id);
+                var lastMessage = await _messagesService.GetLastMessageInConversationAsync(conversationResponse.Id);
                 if (lastMessage != null) {
                     var lastMessageResponse = _mapper.Map<MessageResponse>(lastMessage);
-                    lastMessageResponse.DeliveryStatus = CalculateDeliveryStatus(lastMessage);
+                    lastMessageResponse.DeliveryStatus = _messagesService.GetDeliveryStatus(lastMessage);
                     conversationResponse.LastMessage = lastMessageResponse;
                 }
             }
@@ -55,24 +57,24 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
 
             var currentUserId = _currentUserService.UserId.Value;
 
-            var conversation = await _chatService.GetConversationByIdAsync(request.ConversationId);
+            var conversation = await _conversationsService.GetConversationByIdAsync(request.ConversationId);
             if (conversation == null)
                 return NotFound<GetConversationMessagesResponse>("Conversation not found");
 
-            var messages = await _chatService.GetConversationMessagesWithDeliveryAsync(request.ConversationId, currentUserId, request.Skip, request.Take);
+            var messages = await _messagesService.GetConversationMessagesWithDeliveryAsync(request.ConversationId, currentUserId, request.Skip, request.Take);
             var messageResponses = _mapper.Map<IEnumerable<MessageResponse>>(messages).ToList();
 
             // Calculate delivery status for each message
             foreach (var messageResponse in messageResponses) {
                 var message = messages.FirstOrDefault(m => m.Id == messageResponse.Id);
                 if (message != null) {
-                    messageResponse.DeliveryStatus = CalculateDeliveryStatus(message);
+                    messageResponse.DeliveryStatus = _messagesService.GetDeliveryStatus(message);
                 }
             }
 
             var response = new GetConversationMessagesResponse {
                 ConversationId = request.ConversationId,
-                ConversationTitle = await _chatService.GetConversationTitle(conversation.Id),
+                ConversationTitle = await _conversationsService.GetConversationTitle(conversation.Id),
                 Messages = messageResponses,
             };
 
@@ -85,17 +87,17 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
 
             var currentUserId = _currentUserService.UserId.Value;
 
-            var conversation = await _chatService.GetConversationByIdAsync(request.ConversationId);
+            var conversation = await _conversationsService.GetConversationByIdAsync(request.ConversationId);
             if (conversation == null)
                 return NotFound<GetConversationByIdResponse>("Conversation not found");
 
             var conversationResponse = _mapper.Map<GetConversationByIdResponse>(conversation);
 
-            conversationResponse.Title = await _chatService.GetConversationTitle(conversationResponse.Id);
-            var lastMessage = await _chatService.GetLastMessageInConversationAsync(conversation.Id);
+            conversationResponse.Title = await _conversationsService.GetConversationTitle(conversationResponse.Id);
+            var lastMessage = await _messagesService.GetLastMessageInConversationAsync(conversation.Id);
             if (lastMessage != null) {
                 var lastMessageResponse = _mapper.Map<MessageResponse>(lastMessage);
-                lastMessageResponse.DeliveryStatus = CalculateDeliveryStatus(lastMessage);
+                lastMessageResponse.DeliveryStatus = _messagesService.GetDeliveryStatus(lastMessage);
                 conversationResponse.LastMessage = lastMessageResponse;
             }
             return Success(conversationResponse);
@@ -105,7 +107,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
             if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
                 return Unauthorized<IEnumerable<GetTypingIndicatorsResponse>>("User not authenticated");
 
-            var indicators = await _chatService.GetActiveTypingIndicatorsAsync(request.ConversationId);
+            var indicators = await _conversationsService.GetActiveTypingIndicatorsAsync(request.ConversationId);
             var indicatorResponses = _mapper.Map<IEnumerable<GetTypingIndicatorsResponse>>(indicators);
 
             return Success(indicatorResponses);
@@ -124,12 +126,12 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
             if (otherUser is null || currentUser is null)
                 return NotFound<GetNewConversationResponse>("Other user not found");
 
-            Conversation? conversation = await _chatService.GetDirectConversationBetweenUsersAsync(currentUser.Id, otherUser.Id);
+            Conversation? conversation = await _conversationsService.GetDirectConversationBetweenUsersAsync(currentUser.Id, otherUser.Id);
 
             GetNewConversationResponse newConversationResponse;
             if (conversation is not null) {
                 newConversationResponse = _mapper.Map<GetNewConversationResponse>(conversation);
-                newConversationResponse.Title = await _chatService.GetConversationTitle(conversation.Id);
+                newConversationResponse.Title = await _conversationsService.GetConversationTitle(conversation.Id);
             }
             else {
                 newConversationResponse = new GetNewConversationResponse {
@@ -157,47 +159,6 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
             }
             return Success(newConversationResponse);
         }
-
-        #region Helpers
-        private static DeliveryStatus CalculateDeliveryStatus(Message message) {
-            // If no deliveries exist, message is just sent
-            if (message.MessageDeliveries == null || !message.MessageDeliveries.Any())
-                return DeliveryStatus.Sent;
-
-            // Get the conversation to know how many participants (excluding sender)
-            var conversation = message.Conversation;
-            if (conversation == null)
-                return DeliveryStatus.Sent;
-
-            // Count active participants excluding the sender
-            var expectedRecipients = conversation.Participants
-                .Count(p => p.IsActive && p.UserId != message.SenderId);
-
-            // If there are no other participants, mark as delivered
-            if (expectedRecipients == 0)
-                return DeliveryStatus.Delivered;
-
-            var deliveries = message.MessageDeliveries.ToList();
-            var deliveryCount = deliveries.Count;
-
-            // If not all recipients have delivery records yet, it's still "Sent"
-            if (deliveryCount < expectedRecipients)
-                return DeliveryStatus.Sent;
-
-            // Check if all recipients have read the message
-            var allRead = deliveries.All(d => d.Status == DeliveryStatus.Read);
-            if (allRead)
-                return DeliveryStatus.Read;
-
-            // Check if all recipients have at least received the message
-            var allDelivered = deliveries.All(d => d.Status >= DeliveryStatus.Delivered);
-            if (allDelivered)
-                return DeliveryStatus.Delivered;
-
-            // Otherwise, it's still just sent
-            return DeliveryStatus.Sent;
-        }
-        #endregion
     }
 }
 

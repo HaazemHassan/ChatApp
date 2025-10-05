@@ -2,161 +2,29 @@ using ChatApi.Core.Abstracts.InfrastructureAbstracts;
 using ChatApi.Core.Abstracts.ServicesContracts;
 using ChatApi.Core.Bases;
 using ChatApi.Core.Entities.ChatEntities;
-using ChatApi.Core.Entities.IdentityEntities;
 using ChatApi.Core.Enums;
 using ChatApi.Core.Enums.ChatEnums;
-using ChatApi.Core.Features.Chat.Commands.RequestsModels;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApi.Services.Services {
-    public class ChatService : IChatService {
-        private readonly IConversationRepository _conversationRepository;
+    public class MessagesService : IMessagesService {
         private readonly IMessageRepository _messageRepository;
-        private readonly IConversationParticipantRepository _participantRepository;
-        private readonly ITypingIndicatorRepository _typingIndicatorRepository;
         private readonly IMessageDeliveryRepository _messageDeliveryRepository;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly ICurrentUserService _currentUserService;
-        private readonly IApplicationUserService _applicationUserService;
+        private readonly IConversationRepository _conversationRepository;
+        private readonly IConversationParticipantRepository _participantRepository;
 
-        public ChatService(
-            IConversationRepository conversationRepository,
+        public MessagesService(
             IMessageRepository messageRepository,
-            IConversationParticipantRepository participantRepository,
-            ITypingIndicatorRepository typingIndicatorRepository,
             IMessageDeliveryRepository messageDeliveryRepository,
-            UserManager<ApplicationUser> userManager,
-            ICurrentUserService currentUserService,
-            IApplicationUserService applicationUserService) {
-            _conversationRepository = conversationRepository;
+            IConversationRepository conversationRepository,
+            IConversationParticipantRepository participantRepository) {
             _messageRepository = messageRepository;
-            _participantRepository = participantRepository;
-            _typingIndicatorRepository = typingIndicatorRepository;
             _messageDeliveryRepository = messageDeliveryRepository;
-            _userManager = userManager;
-            _currentUserService = currentUserService;
-            _applicationUserService = applicationUserService;
+            _conversationRepository = conversationRepository;
+            _participantRepository = participantRepository;
         }
 
-
-        public async Task<ServiceOperationResult<Conversation?>> CreateConversationAsync(CreateConversationCommand request) {
-            if (_currentUserService.UserId is null)
-                return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.Unauthorized, "User not authenticated");
-
-            var currentUserId = _currentUserService.UserId.Value;
-
-            bool isCurrentUserParticipant = request.ParticipantIds.Contains(currentUserId);
-            if (!isCurrentUserParticipant)
-                return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.Forbidden, "Creator must be a participant in the conversation");
-
-            if (request.Type == ConversationType.Direct) {
-
-                if (request.Title is not null)
-                    return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.InvalidParameters, "Direct conversations cannot have a title");
-
-                if (request.ParticipantIds.Count != 2)
-                    return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.InvalidParameters, "Direct conversations must have exactly two participants");
-                int firstUserId = request.ParticipantIds.FirstOrDefault();
-                int secondUserId = request.ParticipantIds.LastOrDefault();
-                if (firstUserId == secondUserId)
-                    return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.InvalidParameters, "Cannot create a direct conversation with oneself");
-
-                var existingConversation = await GetDirectConversationBetweenUsersAsync(firstUserId, secondUserId);
-                if (existingConversation != null)
-                    return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.AlreadyExists, "Direct conversation already exists");
-            }
-            else {
-                if (string.IsNullOrWhiteSpace(request.Title))
-                    return ServiceOperationResult<Conversation>.Failure(ServiceOperationStatus.InvalidParameters, "Group conversations must have a title");
-
-            }
-
-            var conversation = new Conversation {
-                Title = request.Title,
-                Type = request.Type,
-                CreatedByUserId = currentUserId
-            };
-            await _conversationRepository.AddAsync(conversation);
-
-            //add participants to the conversations
-            var allParticipants = new List<int>(request.ParticipantIds);
-            foreach (var participantId in allParticipants) {
-                var role = participantId == currentUserId ? ConversationParticipantRole.Owner : ConversationParticipantRole.Member;
-                await AddParticipantAsync(conversation.Id, participantId, role);
-            }
-
-            // Get the created conversation with details included
-            var createdConversation = await GetConversationByIdAsync(conversation.Id);
-            return ServiceOperationResult<Conversation>.Success(createdConversation);
-        }
-
-        public async Task<ServiceOperationStatus> AddParticipantAsync(int conversationId, int userId, ConversationParticipantRole role) {
-            try {
-                var conversation = await GetConversationByIdAsync(conversationId);
-                if (conversation == null)
-                    return ServiceOperationStatus.DependencyNotExist;
-
-                var existingParticipant = await _participantRepository.GetParticipantAsync(conversationId, userId);
-                if (existingParticipant != null) {
-                    if (existingParticipant.IsActive)
-                        return ServiceOperationStatus.AlreadyExists;
-
-                    existingParticipant.IsActive = true;
-                    existingParticipant.JoinedAt = DateTime.UtcNow;
-                    existingParticipant.LeftAt = null;
-                    await _participantRepository.UpdateAsync(existingParticipant);
-                    return ServiceOperationStatus.Succeeded;
-                }
-
-                var participant = new ConversationParticipant {
-                    ConversationId = conversationId,
-                    UserId = userId,
-                    Role = role,
-                    JoinedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
-
-                await _participantRepository.AddAsync(participant);
-
-                //Add system messages to the group chat about the new participant
-
-                if (conversation.Type == ConversationType.Group && role != ConversationParticipantRole.Owner) {
-
-                    var user = await _userManager.FindByIdAsync(userId.ToString());
-                    var systemMessage = new Message {
-                        Content = $"@{user?.UserName} was added to the group.",
-                        ConversationId = conversationId,
-                        MessageType = MessageType.System,
-                    };
-                    await SendMessageAsync(systemMessage);
-                }
-
-
-                return ServiceOperationStatus.Succeeded;
-            }
-            catch {
-                return ServiceOperationStatus.Failed;
-            }
-        }
-
-        public async Task<ServiceOperationStatus> RemoveParticipantAsync(int conversationId, int userId) {
-            try {
-                var participant = await _participantRepository.GetParticipantAsync(conversationId, userId);
-                if (participant == null || !participant.IsActive)
-                    return ServiceOperationStatus.NotFound;
-
-                participant.IsActive = false;
-                participant.LeftAt = DateTime.UtcNow;
-                await _participantRepository.UpdateAsync(participant);
-                return ServiceOperationStatus.Succeeded;
-            }
-            catch {
-                return ServiceOperationStatus.Failed;
-            }
-        }
-
-        public async Task<ServiceOperationStatus> SendMessageAsync(Message message) {
+        public async Task<ServiceOperationResult<string?>> SendMessageAsync(Message message) {
             try {
                 await _messageRepository.AddAsync(message);
 
@@ -166,50 +34,42 @@ namespace ChatApi.Services.Services {
                     await _conversationRepository.UpdateAsync(conversation);
                 }
 
-                return ServiceOperationStatus.Succeeded;
+                return ServiceOperationResult<string>.Success("Message sent successfully");
             }
             catch {
-                return ServiceOperationStatus.Failed;
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, "Failed to send message");
             }
         }
 
-        public async Task<ServiceOperationStatus> EditMessageAsync(int messageId, string newContent) {
+        public async Task<ServiceOperationResult<string?>> EditMessageAsync(int messageId, string newContent) {
             try {
                 var message = await _messageRepository.GetByIdAsync(messageId);
                 if (message == null || message.IsDeleted)
-                    return ServiceOperationStatus.NotFound;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "Message not found");
 
                 message.Content = newContent;
                 message.EditedAt = DateTime.UtcNow;
                 await _messageRepository.UpdateAsync(message);
-                return ServiceOperationStatus.Succeeded;
+                return ServiceOperationResult<string>.Success("Message edited successfully");
             }
             catch {
-                return ServiceOperationStatus.Failed;
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, "Failed to edit message");
             }
         }
 
-        public async Task<ServiceOperationStatus> DeleteMessageAsync(int messageId) {
+        public async Task<ServiceOperationResult<string?>> DeleteMessageAsync(int messageId) {
             try {
                 var message = await _messageRepository.GetByIdAsync(messageId);
                 if (message == null || message.IsDeleted)
-                    return ServiceOperationStatus.NotFound;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "Message not found");
 
                 message.IsDeleted = true;
                 await _messageRepository.UpdateAsync(message);
-                return ServiceOperationStatus.Succeeded;
+                return ServiceOperationResult<string>.Success("Message deleted successfully");
             }
             catch {
-                return ServiceOperationStatus.Failed;
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, "Failed to delete message");
             }
-        }
-
-        public async Task<Conversation?> GetConversationByIdAsync(int conversationId) {
-            return await _conversationRepository.GetConversationWithParticipantsAsync(conversationId);
-        }
-
-        public async Task<IEnumerable<Conversation>> GetUserConversationsAsync(int userId) {
-            return await _conversationRepository.GetUserConversationsAsync(userId);
         }
 
         public async Task<IEnumerable<Message>> GetConversationMessagesAsync(int conversationId, int skip = 0, int take = 50) {
@@ -305,7 +165,6 @@ namespace ChatApi.Services.Services {
             return participantsToUpdate;
         }
 
-
         public async Task<ServiceOperationResult<string?>> MarkMessagesAsDeliveredAsync(List<int> messageIds, int userId) {
             if (messageIds == null || !messageIds.Any())
                 return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "Message IDs list cannot be empty");
@@ -326,7 +185,7 @@ namespace ChatApi.Services.Services {
                     continue;
 
                 // Check if user is participant in the conversation
-                if (!await (IsUserInConversationAsync(userId, message.ConversationId)))
+                if (!await IsUserInConversationAsync(userId, message.ConversationId))
                     continue;
 
                 var existingDelivery = await _messageDeliveryRepository.GetUserMessageDeliveryAsync(message.Id, userId);
@@ -355,48 +214,6 @@ namespace ChatApi.Services.Services {
             return ServiceOperationResult<string>.Success("Messages marked as delivered successfully");
         }
 
-        public async Task<ServiceOperationStatus> UpdateTypingStatusAsync(int conversationId, int userId, bool isTyping) {
-            try {
-                var existingIndicator = await _typingIndicatorRepository.GetUserTypingIndicatorAsync(conversationId, userId);
-
-                if (existingIndicator == null) {
-                    if (isTyping) {
-                        var indicator = new TypingIndicator {
-                            ConversationId = conversationId,
-                            UserId = userId,
-                            IsTyping = true,
-                            LastTypingAt = DateTime.UtcNow
-                        };
-                        await _typingIndicatorRepository.AddAsync(indicator);
-                    }
-                }
-                else {
-                    existingIndicator.IsTyping = isTyping;
-                    existingIndicator.LastTypingAt = DateTime.UtcNow;
-                    await _typingIndicatorRepository.UpdateAsync(existingIndicator);
-                }
-
-                return ServiceOperationStatus.Succeeded;
-            }
-            catch {
-                return ServiceOperationStatus.Failed;
-            }
-        }
-
-        public async Task<IEnumerable<TypingIndicator>> GetActiveTypingIndicatorsAsync(int conversationId) {
-            return await _typingIndicatorRepository.GetActiveTypingIndicatorsAsync(conversationId);
-        }
-
-        public async Task<bool> IsUserInConversationAsync(int userId, int conversationId) {
-            try {
-                var participant = await _participantRepository.GetParticipantAsync(conversationId, userId);
-                return participant != null && participant.IsActive;
-            }
-            catch {
-                return false;
-            }
-        }
-
         public async Task<Message?> GetMessageWithSenderAsync(int messageId) {
             try {
                 return await _messageRepository.GetMessageWithSenderAsync(messageId);
@@ -415,26 +232,6 @@ namespace ChatApi.Services.Services {
             }
         }
 
-        public async Task<Conversation?> GetDirectConversationBetweenUsersAsync(int userId1, int userId2) {
-            try {
-                return await _conversationRepository.GetDirectConversationBetweenUsersAsync(userId1, userId2);
-            }
-            catch {
-                return null;
-            }
-        }
-
-        public async Task<bool> HasDirectConversationWith(int user1Id, int user2Id) {
-            try {
-                var conversation = await _conversationRepository.GetDirectConversationBetweenUsersAsync(user1Id, user2Id);
-                return conversation != null;
-            }
-            catch {
-                return false;
-            }
-        }
-
-
         public async Task<Message?> GetLastMessageInConversationAsync(int conversationId) {
             return await _messageRepository.GetTableNoTracking()
                 .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
@@ -442,29 +239,10 @@ namespace ChatApi.Services.Services {
                 .FirstOrDefaultAsync();
         }
 
-
-
-        #region helpers
-        public async Task<string> GetConversationTitle(int convesationId) {
-            var conversation = await GetConversationByIdAsync(convesationId);
-            if (conversation is null)
-                return null;
-            if (conversation.Type == ConversationType.Direct) {
-                var recipient = conversation.Participants
-                  .FirstOrDefault(p => p.UserId != _currentUserService.UserId);
-
-                if (recipient == null)
-                    return "Unknown User";
-
-                return await _applicationUserService.GetFullName(recipient.UserId);
-            }
-            return conversation.Title;
-        }
-
         public async Task<IEnumerable<int>> GetUndeliveredMessageIdsForUserAsync(int userId) {
             try {
                 // Get all conversations where the user is a participant
-                var userConversations = await GetUserConversationsAsync(userId);
+                var userConversations = await _conversationRepository.GetUserConversationsAsync(userId);
                 var conversationIds = userConversations.Select(c => c.Id).ToList();
 
                 if (!conversationIds.Any())
@@ -515,7 +293,7 @@ namespace ChatApi.Services.Services {
             // Check if all expected recipients have the required delivery status
             foreach (var recipientId in expectedRecipients) {
                 var delivery = deliveries.FirstOrDefault(d => d.UserId == recipientId);
-                
+
                 // If no delivery record exists or status is less than required, return false
                 if (delivery == null || delivery.Status < requiredStatus)
                     return false;
@@ -524,20 +302,53 @@ namespace ChatApi.Services.Services {
             return true;
         }
 
-        #endregion
+        public DeliveryStatus GetDeliveryStatus(Message message) {
+            // If no deliveries exist, message is just sent
+            if (message.MessageDeliveries == null || !message.MessageDeliveries.Any())
+                return DeliveryStatus.Sent;
 
+            // Get the conversation to know how many participants (excluding sender)
+            var conversation = message.Conversation;
+            if (conversation == null)
+                return DeliveryStatus.Sent;
 
+            // Count active participants excluding the sender
+            var expectedRecipients = conversation.Participants
+                .Count(p => p.IsActive && p.UserId != message.SenderId);
 
+            // If there are no other participants, mark as delivered
+            if (expectedRecipients == 0)
+                return DeliveryStatus.Delivered;
+
+            var deliveries = message.MessageDeliveries.ToList();
+            var deliveryCount = deliveries.Count;
+
+            // If not all recipients have delivery records yet, it's still "Sent"
+            if (deliveryCount < expectedRecipients)
+                return DeliveryStatus.Sent;
+
+            // Check if all recipients have read the message
+            var allRead = deliveries.All(d => d.Status == DeliveryStatus.Read);
+            if (allRead)
+                return DeliveryStatus.Read;
+
+            // Check if all recipients have at least received the message
+            var allDelivered = deliveries.All(d => d.Status >= DeliveryStatus.Delivered);
+            if (allDelivered)
+                return DeliveryStatus.Delivered;
+
+            // Otherwise, it's still just sent
+            return DeliveryStatus.Sent;
+        }
+
+        private async Task<bool> IsUserInConversationAsync(int userId, int conversationId) {
+            try {
+                var participant = await _participantRepository.GetParticipantAsync(conversationId, userId);
+                return participant != null && participant.IsActive;
+            }
+            catch {
+                return false;
+            }
+        }
     }
-
-
 }
-
-
-
-
-
-
-
-
-

@@ -39,10 +39,10 @@ namespace ChatApi.Core.Features.Authentication.Commands.Handlers {
             var userMapped = _mapper.Map<ApplicationUser>(request);
             var serviceResult = await _applicationUserService.AddApplicationUser(userMapped, request.Password);
 
-            return serviceResult switch {
-                ServiceOperationStatus.AlreadyExists => Conflict<string>("Email or username already used"),
-                ServiceOperationStatus.Succeeded => Created(),
-                _ => BadRequest<string>(),
+            return serviceResult.Status switch {
+                ServiceOperationStatus.AlreadyExists => Conflict<string>(serviceResult.ErrorMessage ?? "Email or username already used"),
+                ServiceOperationStatus.Succeeded => Created(serviceResult.Data),
+                _ => BadRequest<string>(serviceResult.ErrorMessage),
             };
         }
 

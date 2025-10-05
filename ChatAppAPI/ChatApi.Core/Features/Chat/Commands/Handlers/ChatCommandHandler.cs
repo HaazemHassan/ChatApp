@@ -4,7 +4,6 @@ using ChatApi.Core.Abstracts.ServicesContracts;
 using ChatApi.Core.Bases;
 using ChatApi.Core.Entities.ChatEntities;
 using ChatApi.Core.Enums;
-using ChatApi.Core.Enums.ChatEnums;
 using ChatApi.Core.Features.Chat.Commands.RequestsModels;
 using ChatApi.Core.Features.Chat.Commands.Responses;
 using ChatApi.Core.Features.Chat.Queries.Responses;
@@ -22,25 +21,24 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
         IRequestHandler<MarkMultipleMessagesAsReadCommand, Response<string>>,
         IRequestHandler<MarkMessagesAsDeliveredCommand, Response<string>> {
 
-        private readonly IChatService _chatService;
-        private readonly IConnectionService _connectionService;
+        private readonly IMessagesService _messagesService;
+        private readonly IConversationsService _conversationsService;
         private readonly ICurrentUserService _currentUserService;
-        private readonly IApplicationUserService _applicationUserService;
         private readonly IMapper _mapper;
         private readonly IGenericRepository<Conversation> _conversationRepository;
 
         public ChatCommandHandler(
-            IChatService chatService,
+            IMessagesService messagesService,
+            IConversationsService conversationsService,
             IConnectionService connectionService,
             ICurrentUserService currentUserService,
             IMapper mapper,
             IApplicationUserService applicationUserService,
             IGenericRepository<Conversation> conversationRepository) {
-            _chatService = chatService;
-            _connectionService = connectionService;
+            _messagesService = messagesService;
+            _conversationsService = conversationsService;
             _currentUserService = currentUserService;
             _mapper = mapper;
-            _applicationUserService = applicationUserService;
             _conversationRepository = conversationRepository;
         }
 
@@ -49,7 +47,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
 
             await using var transaction = await _conversationRepository.BeginTransactionAsync(cancellationToken);
             try {
-                var result = await _chatService.CreateConversationAsync(request);
+                var result = await _conversationsService.CreateConversationAsync(request);
 
                 if (result.Status != ServiceOperationStatus.Succeeded) {
                     await transaction.RollbackAsync(cancellationToken);
@@ -73,11 +71,11 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 await transaction.CommitAsync(cancellationToken);
 
                 var responseModel = _mapper.Map<CreateConversationResponse>(conversation);
-                responseModel.Title = await _chatService.GetConversationTitle(conversation.Id);
-                var lastMessage = await _chatService.GetLastMessageInConversationAsync(conversation.Id);
+                responseModel.Title = await _conversationsService.GetConversationTitle(conversation.Id);
+                var lastMessage = await _messagesService.GetLastMessageInConversationAsync(conversation.Id);
                 if (lastMessage != null) {
                     var lastMessageResponse = _mapper.Map<MessageResponse>(lastMessage);
-                    lastMessageResponse.DeliveryStatus = CalculateDeliveryStatus(lastMessage);
+                    lastMessageResponse.DeliveryStatus = _messagesService.GetDeliveryStatus(lastMessage);
                     responseModel.LastMessage = lastMessageResponse;
                 }
 
@@ -95,7 +93,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
 
             var senderId = _currentUserService.UserId.Value;
 
-            var isParticipant = await _chatService.IsUserInConversationAsync(senderId, request.ConversationId);
+            var isParticipant = await _conversationsService.IsUserInConversationAsync(senderId, request.ConversationId);
             if (!isParticipant)
                 return Forbid<SendMessageResponse>("User not authorized to send messages in this conversation");
 
@@ -107,17 +105,17 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 ReplyToMessageId = request.ReplyToMessageId
             };
 
-            var result = await _chatService.SendMessageAsync(message);
-            if (result != ServiceOperationStatus.Succeeded) {
-                return result switch {
-                    ServiceOperationStatus.NotFound => NotFound<SendMessageResponse>("Conversation not found"),
-                    _ => BadRequest<SendMessageResponse>("Failed to send message")
+            var result = await _messagesService.SendMessageAsync(message);
+            if (result.Status != ServiceOperationStatus.Succeeded) {
+                return result.Status switch {
+                    ServiceOperationStatus.NotFound => NotFound<SendMessageResponse>(result.ErrorMessage ?? "Conversation not found"),
+                    _ => BadRequest<SendMessageResponse>(result.ErrorMessage ?? "Failed to send message")
                 };
             }
 
-            var messageResponseData = await _chatService.GetMessageWithDeliveryAsync(message.Id, senderId);
+            var messageResponseData = await _messagesService.GetMessageWithDeliveryAsync(message.Id, senderId);
             var responseModel = _mapper.Map<SendMessageResponse>(messageResponseData);
-            responseModel.DeliveryStatus = CalculateDeliveryStatus(messageResponseData);
+            responseModel.DeliveryStatus = _messagesService.GetDeliveryStatus(messageResponseData);
             return Success(responseModel);
 
         }
@@ -128,20 +126,20 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
             if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
                 return Unauthorized<string>("User not authenticated");
 
-            var result = await _chatService.EditMessageAsync(request.MessageId, request.NewContent);
-            return result switch {
-                ServiceOperationStatus.Succeeded => Success("Message edited successfully"),
-                ServiceOperationStatus.NotFound => NotFound<string>("Message not found"),
-                _ => BadRequest<string>("Failed to edit message")
+            var result = await _messagesService.EditMessageAsync(request.MessageId, request.NewContent);
+            return result.Status switch {
+                ServiceOperationStatus.Succeeded => Success(result.Data ?? "Message edited successfully"),
+                ServiceOperationStatus.NotFound => NotFound<string>(result.ErrorMessage ?? "Message not found"),
+                _ => BadRequest<string>(result.ErrorMessage ?? "Failed to edit message")
             };
         }
 
         public async Task<Response<string>> Handle(DeleteMessageCommand request, CancellationToken cancellationToken) {
-            var result = await _chatService.DeleteMessageAsync(request.MessageId);
-            return result switch {
-                ServiceOperationStatus.Succeeded => Success("Message deleted successfully"),
-                ServiceOperationStatus.NotFound => NotFound<string>("Message not found"),
-                _ => BadRequest<string>("Failed to delete message")
+            var result = await _messagesService.DeleteMessageAsync(request.MessageId);
+            return result.Status switch {
+                ServiceOperationStatus.Succeeded => Success(result.Data ?? "Message deleted successfully"),
+                ServiceOperationStatus.NotFound => NotFound<string>(result.ErrorMessage ?? "Message not found"),
+                _ => BadRequest<string>(result.ErrorMessage ?? "Failed to delete message")
             };
         }
 
@@ -149,21 +147,21 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
             if (!_currentUserService.IsAuthenticated || !_currentUserService.UserId.HasValue)
                 return Unauthorized<string>("User not authenticated");
 
-            var result = await _chatService.AddParticipantAsync(request.ConversationId, request.UserId, request.Role);
-            return result switch {
-                ServiceOperationStatus.Succeeded => Success("Participant added successfully"),
-                ServiceOperationStatus.AlreadyExists => BadRequest<string>("User is already a participant"),
-                ServiceOperationStatus.NotFound => NotFound<string>("Conversation not found"),
-                _ => BadRequest<string>("Failed to add participant")
+            var result = await _conversationsService.AddParticipantAsync(request.ConversationId, request.UserId, request.Role);
+            return result.Status switch {
+                ServiceOperationStatus.Succeeded => Success(result.Data ?? "Participant added successfully"),
+                ServiceOperationStatus.AlreadyExists => BadRequest<string>(result.ErrorMessage ?? "User is already a participant"),
+                ServiceOperationStatus.NotFound => NotFound<string>(result.ErrorMessage ?? "Conversation not found"),
+                _ => BadRequest<string>(result.ErrorMessage ?? "Failed to add participant")
             };
         }
 
         public async Task<Response<string>> Handle(RemoveParticipantCommand request, CancellationToken cancellationToken) {
-            var result = await _chatService.RemoveParticipantAsync(request.ConversationId, request.UserId);
-            return result switch {
-                ServiceOperationStatus.Succeeded => Success("Participant removed successfully"),
-                ServiceOperationStatus.NotFound => NotFound<string>("Participant not found"),
-                _ => BadRequest<string>("Failed to remove participant")
+            var result = await _conversationsService.RemoveParticipantAsync(request.ConversationId, request.UserId);
+            return result.Status switch {
+                ServiceOperationStatus.Succeeded => Success(result.Data ?? "Participant removed successfully"),
+                ServiceOperationStatus.NotFound => NotFound<string>(result.ErrorMessage ?? "Participant not found"),
+                _ => BadRequest<string>(result.ErrorMessage ?? "Failed to remove participant")
             };
         }
 
@@ -172,10 +170,10 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 return Unauthorized<string>("User not authenticated");
 
             var userId = _currentUserService.UserId.Value;
-            var result = await _chatService.UpdateTypingStatusAsync(request.ConversationId, userId, request.IsTyping);
-            return result switch {
-                ServiceOperationStatus.Succeeded => Success("Typing status updated successfully"),
-                _ => BadRequest<string>("Failed to update typing status")
+            var result = await _conversationsService.UpdateTypingStatusAsync(request.ConversationId, userId, request.IsTyping);
+            return result.Status switch {
+                ServiceOperationStatus.Succeeded => Success(result.Data ?? "Typing status updated successfully"),
+                _ => BadRequest<string>(result.ErrorMessage ?? "Failed to update typing status")
             };
         }
 
@@ -188,7 +186,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
             await using var transaction = await _conversationRepository.BeginTransactionAsync(cancellationToken);
             try {
                 var userId = _currentUserService.UserId.Value;
-                var result = await _chatService.MarkMessagesAsReadAsync(request.MessageIds, userId);
+                var result = await _messagesService.MarkMessagesAsReadAsync(request.MessageIds, userId);
 
                 if (result.Status != ServiceOperationStatus.Succeeded) {
                     await transaction.RollbackAsync(cancellationToken);
@@ -200,7 +198,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 }
 
                 await transaction.CommitAsync(cancellationToken);
-                return Success("Messages marked as read successfully");
+                return Success(result.Data ?? "Messages marked as read successfully");
             }
             catch (Exception ex) {
                 await transaction.RollbackAsync(cancellationToken);
@@ -215,7 +213,7 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
             await using var transaction = await _conversationRepository.BeginTransactionAsync(cancellationToken);
             try {
                 var userId = _currentUserService.UserId.Value;
-                var result = await _chatService.MarkMessagesAsDeliveredAsync(request.MessageIds, userId);
+                var result = await _messagesService.MarkMessagesAsDeliveredAsync(request.MessageIds, userId);
 
                 if (result.Status != ServiceOperationStatus.Succeeded) {
                     await transaction.RollbackAsync(cancellationToken);
@@ -234,46 +232,5 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 return BadRequest<string>($"Unexpected error: {ex.Message}");
             }
         }
-
-        #region Helpers
-        private static DeliveryStatus CalculateDeliveryStatus(Message message) {
-            // If no deliveries exist, message is just sent
-            if (message.MessageDeliveries == null || !message.MessageDeliveries.Any())
-                return DeliveryStatus.Sent;
-
-            // Get the conversation to know how many participants (excluding sender)
-            var conversation = message.Conversation;
-            if (conversation == null)
-                return DeliveryStatus.Sent;
-
-            // Count active participants excluding the sender
-            var expectedRecipients = conversation.Participants
-                .Count(p => p.IsActive && p.UserId != message.SenderId);
-
-            // If there are no other participants, mark as delivered
-            if (expectedRecipients == 0)
-                return DeliveryStatus.Delivered;
-
-            var deliveries = message.MessageDeliveries.ToList();
-            var deliveryCount = deliveries.Count;
-
-            // If not all recipients have delivery records yet, it's still "Sent"
-            if (deliveryCount < expectedRecipients)
-                return DeliveryStatus.Sent;
-
-            // Check if all recipients have read the message
-            var allRead = deliveries.All(d => d.Status == DeliveryStatus.Read);
-            if (allRead)
-                return DeliveryStatus.Read;
-
-            // Check if all recipients have at least received the message
-            var allDelivered = deliveries.All(d => d.Status >= DeliveryStatus.Delivered);
-            if (allDelivered)
-                return DeliveryStatus.Delivered;
-
-            // Otherwise, it's still just sent
-            return DeliveryStatus.Sent;
-        }
-        #endregion
     }
 }

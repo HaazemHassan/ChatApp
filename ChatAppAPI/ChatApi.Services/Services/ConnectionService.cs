@@ -1,5 +1,6 @@
 using ChatApi.Core.Abstracts.InfrastructureAbstracts;
 using ChatApi.Core.Abstracts.ServicesContracts;
+using ChatApi.Core.Bases;
 using ChatApi.Core.Entities.ChatEntities;
 using ChatApi.Core.Entities.IdentityEntities;
 using ChatApi.Core.Enums;
@@ -21,7 +22,7 @@ namespace ChatApi.Services.Services {
             _userManager = userManager;
         }
 
-        public async Task<ServiceOperationStatus> AddUserConnectionAsync(int userId, string connectionId) {
+        public async Task<ServiceOperationResult<string?>> AddUserConnectionAsync(int userId, string connectionId) {
             try {
                 var connection = new UserConnection {
                     UserId = userId,
@@ -30,18 +31,18 @@ namespace ChatApi.Services.Services {
 
                 await _connectionRepository.AddAsync(connection);
                 await UpdateUserOnlineStatusAsync(userId, true);
-                return ServiceOperationStatus.Succeeded;
+                return ServiceOperationResult<string>.Success("Connection added successfully");
             }
-            catch {
-                return ServiceOperationStatus.Failed;
+            catch (Exception ex) {
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, $"Failed to add connection: {ex.Message}");
             }
         }
 
-        public async Task<ServiceOperationStatus> RemoveUserConnectionAsync(string connectionId) {
+        public async Task<ServiceOperationResult<string?>> RemoveUserConnectionAsync(string connectionId) {
             try {
                 var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
                 if (connection == null)
-                    return ServiceOperationStatus.NotFound;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "Connection not found");
 
                 await _connectionRepository.DeleteAsync(connection);
 
@@ -57,22 +58,22 @@ namespace ChatApi.Services.Services {
                     await _groupRepository.DeleteRangeAsync(groupConnections.ToList());
                 }
 
-                return ServiceOperationStatus.Succeeded;
+                return ServiceOperationResult<string>.Success("Connection removed successfully");
             }
-            catch {
-                return ServiceOperationStatus.Failed;
+            catch (Exception ex) {
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, $"Failed to remove connection: {ex.Message}");
             }
         }
 
-        public async Task<ServiceOperationStatus> AddToGroupAsync(string connectionId, int conversationId) {
+        public async Task<ServiceOperationResult<string?>> AddToGroupAsync(string connectionId, int conversationId) {
             try {
                 var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
                 if (connection == null)
-                    return ServiceOperationStatus.NotFound;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "Connection not found");
 
                 var existingGroup = await _groupRepository.GetTableNoTracking(g => g.UserConnectionId == connection.Id && g.ConversationId == conversationId).FirstOrDefaultAsync();
                 if (existingGroup != null)
-                    return ServiceOperationStatus.AlreadyExists;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.AlreadyExists, "Connection already in group");
 
                 var connectionGroup = new ConnectionGroup {
                     UserConnectionId = connection.Id,
@@ -82,36 +83,36 @@ namespace ChatApi.Services.Services {
                 };
 
                 await _groupRepository.AddAsync(connectionGroup);
-                return ServiceOperationStatus.Succeeded;
+                return ServiceOperationResult<string>.Success("Added to group successfully");
             }
-            catch {
-                return ServiceOperationStatus.Failed;
+            catch (Exception ex) {
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, $"Failed to add to group: {ex.Message}");
             }
         }
 
-        public async Task<ServiceOperationStatus> RemoveFromGroupAsync(string connectionId, string groupName) {
+        public async Task<ServiceOperationResult<string?>> RemoveFromGroupAsync(string connectionId, string groupName) {
             try {
                 var connection = await _connectionRepository.GetConnectionByIdAsync(connectionId);
                 if (connection == null)
-                    return ServiceOperationStatus.NotFound;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "Connection not found");
 
                 // For SignalR groups, we'll use ConversationId from group name
                 if (!groupName.StartsWith("Conversation_"))
-                    return ServiceOperationStatus.InvalidParameters;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "Invalid group name format");
 
                 var conversationIdStr = groupName.Replace("Conversation_", "");
                 if (!int.TryParse(conversationIdStr, out var conversationId))
-                    return ServiceOperationStatus.InvalidParameters;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.InvalidParameters, "Invalid conversation ID");
 
                 var connectionGroup = await _groupRepository.GetTableNoTracking(g => g.UserConnectionId == connection.Id && g.ConversationId == conversationId).FirstOrDefaultAsync();
                 if (connectionGroup == null)
-                    return ServiceOperationStatus.NotFound;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "Group connection not found");
 
                 await _groupRepository.DeleteAsync(connectionGroup);
-                return ServiceOperationStatus.Succeeded;
+                return ServiceOperationResult<string>.Success("Removed from group successfully");
             }
-            catch {
-                return ServiceOperationStatus.Failed;
+            catch (Exception ex) {
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, $"Failed to remove from group: {ex.Message}");
             }
         }
 
@@ -120,21 +121,21 @@ namespace ChatApi.Services.Services {
             return connections.Select(c => c.ConnectionId);
         }
 
-        public async Task<ServiceOperationStatus> UpdateUserOnlineStatusAsync(int userId, bool isOnline) {
+        public async Task<ServiceOperationResult<string?>> UpdateUserOnlineStatusAsync(int userId, bool isOnline) {
             try {
                 var user = await _userManager.FindByIdAsync(userId.ToString());
                 if (user == null)
-                    return ServiceOperationStatus.NotFound;
+                    return ServiceOperationResult<string>.Failure(ServiceOperationStatus.NotFound, "User not found");
 
                 user.IsOnline = isOnline;
                 if (!isOnline)
                     user.LastSeen = DateTime.UtcNow;
 
                 await _userManager.UpdateAsync(user);
-                return ServiceOperationStatus.Succeeded;
+                return ServiceOperationResult<string>.Success("User online status updated successfully");
             }
-            catch {
-                return ServiceOperationStatus.Failed;
+            catch (Exception ex) {
+                return ServiceOperationResult<string>.Failure(ServiceOperationStatus.Failed, $"Failed to update online status: {ex.Message}");
             }
         }
 
