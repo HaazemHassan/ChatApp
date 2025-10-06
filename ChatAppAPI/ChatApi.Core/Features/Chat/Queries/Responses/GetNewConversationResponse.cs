@@ -7,6 +7,6 @@ namespace ChatApi.Core.Features.Chat.Queries.Responses {
         public ConversationType Type { get; set; } = ConversationType.Direct;
         public List<ConversationParticipantResponse> Participants { get; set; } = new();
         public MessageResponse? LastMessage { get; set; }
-
+        public int UnreadCount { get; set; }
     }
 }

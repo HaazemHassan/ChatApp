@@ -341,6 +341,40 @@ namespace ChatApi.Services.Services {
             return DeliveryStatus.Sent;
         }
 
+        public async Task<int> GetUnreadMessagesCountAsync(int conversationId, int userId) {
+            try {
+                // Get the participant to find their last read message
+                var participant = await _participantRepository.GetParticipantAsync(conversationId, userId);
+                if (participant == null || !participant.IsActive)
+                    return 0;
+
+                // Get all messages in the conversation that were sent by others
+                var messages = await _messageRepository.GetTableNoTracking()
+                    .Where(m => m.ConversationId == conversationId
+                               && m.SenderId != userId
+                               && !m.IsDeleted)
+                    .ToListAsync();
+
+                if (!messages.Any())
+                    return 0;
+
+                // If user has never read any message, all messages are unread
+                if (participant.LastReadMessageId == null)
+                    return messages.Count;
+
+                var lastReadMessage = await _messageRepository.GetByIdAsync(participant.LastReadMessageId.Value);
+                if (lastReadMessage == null)
+                    return messages.Count;
+
+                // Count messages sent after the last read message
+                var unreadCount = messages.Count(m => m.SentAt > lastReadMessage.SentAt);
+                return unreadCount;
+            }
+            catch {
+                return 0;
+            }
+        }
+
         private async Task<bool> IsUserInConversationAsync(int userId, int conversationId) {
             try {
                 var participant = await _participantRepository.GetParticipantAsync(conversationId, userId);

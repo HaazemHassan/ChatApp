@@ -67,11 +67,16 @@ namespace ChatApi.Core.Features.Chat.Commands.Handlers {
                 }
 
                 var conversation = result.Data;
-
                 await transaction.CommitAsync(cancellationToken);
+
+
+                //Prepaer conversation response
+                int currentUserId = _currentUserService.UserId!.Value;
 
                 var responseModel = _mapper.Map<CreateConversationResponse>(conversation);
                 responseModel.Title = await _conversationsService.GetConversationTitle(conversation.Id);
+                responseModel.UnreadCount = await _messagesService.GetUnreadMessagesCountAsync(responseModel.Id, currentUserId);
+
                 var lastMessage = await _messagesService.GetLastMessageInConversationAsync(conversation.Id);
                 if (lastMessage != null) {
                     var lastMessageResponse = _mapper.Map<MessageResponse>(lastMessage);

@@ -40,6 +40,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
 
             foreach (var conversationResponse in conversationResponses) {
                 conversationResponse.Title = await _conversationsService.GetConversationTitle(conversationResponse.Id);
+                conversationResponse.UnreadCount = await _messagesService.GetUnreadMessagesCountAsync(conversationResponse.Id, currentUserId);
                 var lastMessage = await _messagesService.GetLastMessageInConversationAsync(conversationResponse.Id);
                 if (lastMessage != null) {
                     var lastMessageResponse = _mapper.Map<MessageResponse>(lastMessage);
@@ -94,6 +95,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
             var conversationResponse = _mapper.Map<GetConversationByIdResponse>(conversation);
 
             conversationResponse.Title = await _conversationsService.GetConversationTitle(conversationResponse.Id);
+            conversationResponse.UnreadCount = await _messagesService.GetUnreadMessagesCountAsync(conversationResponse.Id, currentUserId);
             var lastMessage = await _messagesService.GetLastMessageInConversationAsync(conversation.Id);
             if (lastMessage != null) {
                 var lastMessageResponse = _mapper.Map<MessageResponse>(lastMessage);
@@ -132,6 +134,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
             if (conversation is not null) {
                 newConversationResponse = _mapper.Map<GetNewConversationResponse>(conversation);
                 newConversationResponse.Title = await _conversationsService.GetConversationTitle(conversation.Id);
+                newConversationResponse.UnreadCount = await _messagesService.GetUnreadMessagesCountAsync(conversation.Id, currentUser.Id);
             }
             else {
                 newConversationResponse = new GetNewConversationResponse {
@@ -139,6 +142,7 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
                     Title = otherUser.FullName,
                     Type = ConversationType.Direct,
                     LastMessage = null,
+                    UnreadCount = 0,
                     Participants = new List<ConversationParticipantResponse> {
                         new ConversationParticipantResponse {
                             Id = null,
@@ -161,6 +165,30 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

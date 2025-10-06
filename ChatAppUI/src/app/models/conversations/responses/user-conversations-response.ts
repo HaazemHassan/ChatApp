@@ -15,4 +15,5 @@ export interface UserConversation {
   type: ConversationType;
   participants: Participant[];
   lastMessage: MessageResponse | null;
+  unreadCount: number;
 }

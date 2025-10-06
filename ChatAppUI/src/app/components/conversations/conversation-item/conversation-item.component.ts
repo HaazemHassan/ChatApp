@@ -23,15 +23,14 @@ export class ConversationItemComponent {
   constructor() {
     effect(() => {
       const convo = this.conversation();
-      if (convo) {
-        console.log('Conversation changed via effect:', convo);
-      }
+      console.log('Conversation item', convo);
     });
   }
 
   onSelect() {
     if (this.conversation()) {
       this.selectedConversation.emit(this.conversation());
+      this.conversation().unreadCount = 0;
     }
 
   }

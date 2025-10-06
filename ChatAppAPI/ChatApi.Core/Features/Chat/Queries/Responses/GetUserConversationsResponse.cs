@@ -8,7 +8,6 @@ namespace ChatApi.Core.Features.Chat.Queries.Responses {
         public List<ConversationParticipantResponse> Participants { get; set; } = new();
         public MessageResponse? LastMessage { get; set; }
         public bool IsOnline { get; set; }
-
-        //public int UnreadCount { get; set; }
+        public int UnreadCount { get; set; }
     }
 }

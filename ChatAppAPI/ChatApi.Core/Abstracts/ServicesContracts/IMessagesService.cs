@@ -1,6 +1,5 @@
 using ChatApi.Core.Bases;
 using ChatApi.Core.Entities.ChatEntities;
-using ChatApi.Core.Enums;
 using ChatApi.Core.Enums.ChatEnums;
 
 namespace ChatApi.Core.Abstracts.ServicesContracts {
@@ -18,5 +17,7 @@ namespace ChatApi.Core.Abstracts.ServicesContracts {
         Task<IEnumerable<int>> GetUndeliveredMessageIdsForUserAsync(int userId);
         Task<bool> AreAllParticipantsDeliveredAsync(Message message, DeliveryStatus requiredStatus);
         DeliveryStatus GetDeliveryStatus(Message message);
+        Task<int> GetUnreadMessagesCountAsync(int conversationId, int userId);
+
     }
 }

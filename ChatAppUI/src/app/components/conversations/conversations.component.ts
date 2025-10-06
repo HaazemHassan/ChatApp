@@ -73,6 +73,8 @@ export class ConversationsComponent implements OnInit {
               console.error('Error notifying messages read:', err);
             }
           }
+          else
+            this.updateUnreadCountForConversation(message.conversationId);
         }
       } catch (err) {
         console.error('Error notifying messages delivered:', err);
@@ -88,7 +90,6 @@ export class ConversationsComponent implements OnInit {
       this.handleMessagesDelivered(messageIds);
     });
   }
-
 
   private handleNewConversationReceived(newConversation: UserConversation): void {
     const existingConversation = this.conversations.find(conv =>
@@ -234,6 +235,18 @@ export class ConversationsComponent implements OnInit {
         console.log('User not found or error occurred:', error);
       }
     });
+  }
+
+
+  updateUnreadCountForConversation(conversationId: number) {
+    const conversation = this.conversations.find(conv => conv.id === conversationId);
+    if (conversation) {
+      const updatedConversation = { ...conversation, unreadCount: conversation.unreadCount + 1 };
+      this.conversations = this.conversations.map(conv =>
+        conv.id === updatedConversation.id ? updatedConversation : conv
+      );
+    }
+
   }
 
 }

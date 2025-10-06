@@ -97,28 +97,7 @@ namespace ChatApi.Hubs {
                         await Clients.Caller.SendAsync("NewDirectConversationInfo", conversationData);
 
                 }
-                else {
-                    // Fallback to original behavior if data is not available
-                    var userId = _currentUserService.UserId!.Value;
-                    var allParticipants = new List<int>(participantIds);
-                    if (!allParticipants.Contains(userId))
-                        allParticipants.Add(userId);
 
-                    var participantConnections = new List<string>();
-                    foreach (var participantId in allParticipants) {
-                        var connections = await _connectionService.GetUserConnectionsAsync(participantId);
-                        participantConnections.AddRange(connections);
-                    }
-
-                    await Clients.Clients(participantConnections).SendAsync("ConversationCreated", new {
-                        Id = 0, // This won't work properly now
-                        Title = title,
-                        Type = type,
-                        CreatedByUserId = userId,
-                        CreatedAt = DateTime.UtcNow,
-                        ParticipantIds = allParticipants
-                    });
-                }
             }
             else {
                 await Clients.Caller.SendAsync("Error", response.Message);

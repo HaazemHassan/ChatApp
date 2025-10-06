@@ -7,7 +7,7 @@ namespace ChatApi.Infrastructure.Repositories {
     public class MessageRepository : GenericRepository<Message>, IMessageRepository {
         public MessageRepository(AppDbContext dbContext) : base(dbContext) { }
 
-        public async Task<IEnumerable<Message>> GetConversationMessagesAsync(int conversationId, int skip = 0, int take = 50) {
+        public async Task<IEnumerable<Message>> GetConversationMessagesAsync(int conversationId, int skip = 0, int take = 200) {
             return await _dbContext.Messages
                 .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
                 .Include(m => m.Sender)
@@ -16,12 +16,12 @@ namespace ChatApi.Infrastructure.Repositories {
                 .Include(m => m.Conversation)
                     .ThenInclude(c => c.Participants)
                 .OrderBy(m => m.SentAt)
-                .Skip(skip)
-                .Take(take)
+                .Skip(0)
+                .Take(200)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Message>> GetConversationMessagesWithDeliveryAsync(int conversationId, int userId, int skip = 0, int take = 50) {
+        public async Task<IEnumerable<Message>> GetConversationMessagesWithDeliveryAsync(int conversationId, int userId, int skip = 0, int take = 200) {
             return await _dbContext.Messages
                 .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
                 .Include(m => m.Sender)
@@ -31,8 +31,8 @@ namespace ChatApi.Infrastructure.Repositories {
                     .ThenInclude(c => c.Participants)
                 .Include(m => m.MessageDeliveries.Where(md => md.UserId != userId))
                 .OrderBy(m => m.SentAt)
-                .Skip(skip)
-                .Take(take)
+                .Skip(0)
+                .Take(200)
                 .ToListAsync();
         }
 
@@ -60,5 +60,7 @@ namespace ChatApi.Infrastructure.Repositories {
                 .Include(m => m.MessageDeliveries.Where(md => md.UserId != userId))
                 .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted);
         }
+
+
     }
 }

@@ -19,6 +19,13 @@ namespace ChatApi.Controllers {
             return NewResult(response);
         }
 
+        [HttpGet("conversations/{conversationId:int}")]
+        public async Task<IActionResult> GetConversationById([FromRoute] int conversationId) {
+            var query = new GetConversationByIdQuery { ConversationId = conversationId };
+            var response = await mediator.Send(query);
+            return NewResult(response);
+        }
+
         [HttpGet("conversations/{conversationId:int}/messages")]
         public async Task<IActionResult> GetConversationMessages([FromRoute] int conversationId) {
             var query = new GetConversationMessagesQuery { ConversationId = conversationId };

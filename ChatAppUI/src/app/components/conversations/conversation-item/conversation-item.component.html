@@ -43,8 +43,13 @@
       }
     </div>
     @if (conversation().lastMessage) {
-    <div class="last-message">
-      {{ lastMessagePreview() }}
+    <div class="message-row">
+      <div class="last-message">
+        {{ lastMessagePreview() }}
+      </div>
+      @if (conversation().unreadCount > 0) {
+      <span class="unread-badge">{{ conversation().unreadCount }}</span>
+      }
     </div>
     }
   </div>
