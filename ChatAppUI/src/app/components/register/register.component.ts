@@ -7,8 +7,15 @@ import {
   Validators,
 } from '@angular/forms';
 import { AuthenticationService } from '../../services/authentication.service';
+import { ApplicationUserService } from '../../services/application-user.service';
 import { RegisterRequest } from '../../models/auth/requests/register-request';
-import { matchValidator } from '../../helpers/validators';
+import {
+  matchValidator,
+  emailValidator,
+  fullNameValidator,
+  usernameAvailabilityValidator,
+  emailAvailabilityValidator
+} from '../../helpers/validators';
 
 @Component({
   selector: 'app-register',
@@ -18,24 +25,34 @@ import { matchValidator } from '../../helpers/validators';
 })
 export class RegisterComponent {
   registerForm: FormGroup;
+  errorMessage: string = '';
 
   constructor(
     private authService: AuthenticationService,
+    private userService: ApplicationUserService,
     private router: Router,
     private formBuilder: FormBuilder
   ) {
     this.registerForm = this.formBuilder.group(
       {
-        fullName: ['', [Validators.required, Validators.minLength(3)]],
-        userName: ['', [Validators.required, Validators.minLength(3)]],
-        email: ['', [Validators.required, Validators.email]],
+        fullName: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(20), fullNameValidator()]],
+        userName: [
+          '',
+          [Validators.required, Validators.minLength(4), Validators.maxLength(20)],
+          [usernameAvailabilityValidator(this.userService)]
+        ],
+        email: [
+          '',
+          [Validators.required, emailValidator()],
+          [emailAvailabilityValidator(this.userService)]
+        ],
         password: ['', [Validators.required, Validators.minLength(3)]],
         confirmPassword: ['', [Validators.required]],
         address: ['', [Validators.required]],
         country: ['', [Validators.required]],
         phoneNumber: [
           '',
-          [Validators.required, Validators.pattern(/^\+?[1-9]\d{1,14}$/)],
+          [Validators.required, Validators.pattern(/^\+?[0-9]\d{1,14}$/)],
         ],
       },
       { validators: matchValidator('password', 'confirmPassword') }
@@ -44,6 +61,7 @@ export class RegisterComponent {
 
   register(): void {
     if (this.registerForm.valid) {
+      this.errorMessage = '';
       const registerData: RegisterRequest = {
         fullName: this.registerForm.get('fullName')?.value,
         userName: this.registerForm.get('userName')?.value,
@@ -61,10 +79,12 @@ export class RegisterComponent {
             console.log('Registration successful');
             this.router.navigate(['/']);
           } else {
+            this.errorMessage = response.message || 'Registration failed. Please try again.';
             console.error('Registration failed:', response.message);
           }
         },
         error: (error) => {
+          this.errorMessage = error.message || 'An error occurred during registration. Please try again.';
           console.error('Registration error:', error);
         },
       });

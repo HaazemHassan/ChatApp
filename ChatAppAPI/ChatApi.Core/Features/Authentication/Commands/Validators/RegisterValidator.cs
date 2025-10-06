@@ -41,7 +41,7 @@ namespace ChatApi.Core.Features.Authentication.Commands.Validators {
                 .Equal(x => x.Password).WithMessage("Password does not match");
 
             RuleFor(x => x.PhoneNumber)
-                .Matches(expression: @"^\+?[1-9]\d{1,14}$")
+                .Matches(expression: @"^\+?[0-9]\d{1,14}$")
                 .WithMessage("Phone number is not valid.");
         }
     }

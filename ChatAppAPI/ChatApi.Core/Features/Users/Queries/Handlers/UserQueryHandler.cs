@@ -11,7 +11,9 @@ namespace ChatApi.Core.Features.Users.Queries.Handlers {
     public class UserQueryHandler : ResponseHandler,
                                     IRequestHandler<GetUserByIdQuery, Response<GetUserByIdResponse>>,
                                     IRequestHandler<GetUserByUsernameQuery, Response<GetUserByUsernameResponse>>,
-                                    IRequestHandler<SearchUsersQuery, Response<List<SearchUsersResponse>>> {
+                                    IRequestHandler<SearchUsersQuery, Response<List<SearchUsersResponse>>>,
+                                    IRequestHandler<CheckUsernameAvailabilityQuery, Response<bool>>,
+                                    IRequestHandler<CheckEmailAvailabilityQuery, Response<bool>> {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMapper _mapper;
         private readonly IApplicationUserService _applicationUserService;
@@ -67,6 +69,20 @@ namespace ChatApi.Core.Features.Users.Queries.Handlers {
 
             var usersResponse = _mapper.Map<List<SearchUsersResponse>>(users);
             return Success(usersResponse);
+        }
+
+        public async Task<Response<bool>> Handle(CheckUsernameAvailabilityQuery request, CancellationToken cancellationToken) {
+            var user = await _userManager.FindByNameAsync(request.Username);
+            // true if username is available (user not found), false if username is taken
+            bool isAvailable = user is null;
+            return Success(isAvailable);
+        }
+
+        public async Task<Response<bool>> Handle(CheckEmailAvailabilityQuery request, CancellationToken cancellationToken) {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            // true if email is available (user not found), false if email is taken
+            bool isAvailable = user is null;
+            return Success(isAvailable);
         }
     }
 }

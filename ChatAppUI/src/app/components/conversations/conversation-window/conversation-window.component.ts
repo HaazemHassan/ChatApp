@@ -218,7 +218,9 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
     const grouped = new Map<string, MessageResponse[]>();
 
     this.messages.forEach(message => {
-      const messageDate = new Date(message.sentAt);
+      // Convert UTC time to local time
+      const dateString = message.sentAt.endsWith('Z') ? message.sentAt : message.sentAt + 'Z';
+      const messageDate = new Date(dateString);
       const dateKey = this.getDateKey(messageDate);
 
       if (!grouped.has(dateKey)) {
@@ -234,7 +236,9 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   }
 
   private addMessageToGroup(message: MessageResponse): void {
-    const messageDate = new Date(message.sentAt);
+    // Convert UTC time to local time
+    const dateString = message.sentAt.endsWith('Z') ? message.sentAt : message.sentAt + 'Z';
+    const messageDate = new Date(dateString);
     const dateKey = this.getDateKey(messageDate);
     const existingGroup = this.groupedMessages.find(g => g.date === dateKey);
 
@@ -249,7 +253,9 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   }
 
   private updateMessageInGroup(updatedMessage: MessageResponse): void {
-    const messageDate = new Date(updatedMessage.sentAt);
+    // Convert UTC time to local time
+    const dateString = updatedMessage.sentAt.endsWith('Z') ? updatedMessage.sentAt : updatedMessage.sentAt + 'Z';
+    const messageDate = new Date(dateString);
     const dateKey = this.getDateKey(messageDate);
 
     const group = this.groupedMessages.find(g => g.date === dateKey);

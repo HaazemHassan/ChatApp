@@ -45,6 +45,10 @@
           <span>Password must be at least 3 characters</span>
           }
         </div>
+        } @if (errorMessage) {
+        <div class="error-message-box">
+          <span>{{ errorMessage }}</span>
+        </div>
         }
       </div>
 

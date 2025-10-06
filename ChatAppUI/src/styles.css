@@ -1,13 +1,9 @@
-/* You can add global styles to this file, and also import other style files */
-
-/* Global Reset */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* Global Typography */
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;
@@ -16,15 +12,16 @@ body {
   min-height: 100vh;
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Focus styles for accessibility */
-*:focus {
-  outline: 2px solid #667eea;
-  outline-offset: 2px;
+
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
 }
 
 /* Custom scrollbar */
@@ -93,4 +90,40 @@ a {
 }
 .mt-4 {
   margin-top: 1rem;
+}
+
+/* Global Error Message Box */
+.error-message-box {
+  padding: 14px 16px;
+  background-color: #fff5f5;
+  border: 1px solid #fc8181;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.error-message-box span {
+  font-size: 14px;
+  color: #c53030;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-message-box span::before {
+  content: "";
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

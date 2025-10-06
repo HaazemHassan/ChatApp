@@ -101,11 +101,67 @@
   border-color: #ef4444;
 }
 
+.form-input.pending {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.form-input.pending:focus {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+}
+
+.form-input.valid {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.form-input.valid:focus {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  border-color: #10b981;
+}
+
 .error-message {
   color: #ef4444;
   font-size: 0.875rem;
   font-weight: 500;
   animation: shake 0.4s ease-in-out;
+}
+
+.info-message {
+  color: #f59e0b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+
+
+.success-message {
+  color: #10b981;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.success-message span::after {
+  content: " ✓";
+  font-size: 0.875rem;
+  font-weight: bold;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes shake {
@@ -231,15 +287,9 @@
 }
 
 /* Enhanced focus styles for accessibility */
-.form-input:focus-visible {
-  outline: 2px solid #667eea;
-  outline-offset: 2px;
-}
 
-.register-btn:focus-visible {
-  outline: 2px solid #667eea;
-  outline-offset: 2px;
-}
+
+
 
 /* Loading state animation */
 .register-btn.loading {

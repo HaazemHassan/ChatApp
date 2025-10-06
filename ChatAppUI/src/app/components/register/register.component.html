@@ -27,7 +27,9 @@
             @if (fullName?.errors?.['required']) {
             <span>Full name is required</span>
             } @if (fullName?.errors?.['minlength']) {
-            <span>Full name must be at least 2 characters</span>
+            <span>Full name must be at least 3 characters</span>
+            } @if (fullName?.errors?.['invalidFullName']) {
+            <span>Full name must contain only letters and spaces</span>
             }
           </div>
           }
@@ -41,14 +43,28 @@
             formControlName="userName"
             class="form-input"
             [class.error]="userName?.invalid && userName?.touched"
+            [class.pending]="userName?.pending"
+            [class.valid]="
+              userName?.valid && userName?.touched && !userName?.pending
+            "
             placeholder="Choose a username"
           />
-          @if (userName?.invalid && userName?.touched) {
+          @if (userName?.pending) {
+          <div class="info-message">
+            <span>Checking username availability...</span>
+          </div>
+          } @if (userName?.valid && userName?.touched && !userName?.pending) {
+          <div class="success-message">
+            <span>Username is available!</span>
+          </div>
+          } @if (userName?.invalid && userName?.touched && !userName?.pending) {
           <div class="error-message">
             @if (userName?.errors?.['required']) {
             <span>Username is required</span>
             } @if (userName?.errors?.['minlength']) {
             <span>Username must be at least 3 characters</span>
+            } @if (userName?.errors?.['usernameTaken']) {
+            <span>This username is already taken</span>
             }
           </div>
           }
@@ -63,15 +79,27 @@
           type="email"
           formControlName="email"
           class="form-input"
-          [class.error]="email?.invalid && email?.touched"
+          [class.error]="email?.invalid && email?.touched && !email?.pending"
+          [class.pending]="email?.pending"
+          [class.valid]="email?.valid && email?.touched && !email?.pending"
           placeholder="Enter your email address"
         />
-        @if (email?.invalid && email?.touched) {
+        @if (email?.pending) {
+        <div class="info-message">
+          <span>Checking email availability...</span>
+        </div>
+        } @if (email?.valid && email?.touched && !email?.pending) {
+        <div class="success-message">
+          <span>Email is available!</span>
+        </div>
+        } @if (email?.invalid && email?.touched && !email?.pending) {
         <div class="error-message">
           @if (email?.errors?.['required']) {
           <span>Email is required</span>
-          } @if (email?.errors?.['email']) {
+          } @if (email?.errors?.['invalidEmail']) {
           <span>Please enter a valid email address</span>
+          } @if (email?.errors?.['emailTaken']) {
+          <span>This email is already registered</span>
           }
         </div>
         }
@@ -186,6 +214,12 @@
           }
         </div>
       </div>
+
+      @if (errorMessage) {
+      <div class="error-message-box">
+        <span>{{ errorMessage }}</span>
+      </div>
+      }
 
       <div class="form-actions">
         <button

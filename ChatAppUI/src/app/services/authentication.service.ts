@@ -1,5 +1,6 @@
+import { MessageResponse } from './../models/conversations/responses/conversation-messages-response';
 import { ChatHubService } from './chat-hub.service';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, OnInit } from '@angular/core';
 import { ApiResponse } from '../models/api-response';
 import { BehaviorSubject, catchError, map, Observable, tap, throwError } from 'rxjs';
@@ -52,9 +53,9 @@ export class AuthenticationService {
 
           return response;
         }),
-        catchError((error) => {
-          console.error('Login failed:', error);
-          return throwError(() => error);
+        catchError((error: HttpErrorResponse) => {
+          const apiError = error.error as ApiResponse<null>;
+          return throwError(() => new Error(apiError.message));
         })
       );
   }
@@ -77,9 +78,9 @@ export class AuthenticationService {
           }
           return response;
         }),
-        catchError((error) => {
-          console.error('Registration failed:', error);
-          return throwError(() => error);
+        catchError((error: HttpErrorResponse) => {
+          const apiError = error.error as ApiResponse<null>;
+          return throwError(() => new Error(apiError.message));
         })
       );
   }

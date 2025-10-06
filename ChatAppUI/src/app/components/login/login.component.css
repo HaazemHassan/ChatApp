@@ -264,10 +264,7 @@
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
 }
 
-.form-input:focus-visible {
-  outline: 2px solid #667eea;
-  outline-offset: 2px;
-}
+
 
 /* Loading State (for future use) */
 .login-btn.loading {

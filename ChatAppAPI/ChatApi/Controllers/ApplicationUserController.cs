@@ -36,6 +36,18 @@ namespace ChatApi.Controllers {
             return NewResult(result);
         }
 
+        [HttpGet("check-username")]
+        public async Task<IActionResult> CheckUsernameAvailability([FromQuery] CheckUsernameAvailabilityQuery query) {
+            var result = await mediator.Send(query);
+            return NewResult(result);
+        }
+
+        [HttpGet("check-email")]
+        public async Task<IActionResult> CheckEmailAvailability([FromQuery] CheckEmailAvailabilityQuery query) {
+            var result = await mediator.Send(query);
+            return NewResult(result);
+        }
+
 
 
         //[HttpPatch("{id:int}")]

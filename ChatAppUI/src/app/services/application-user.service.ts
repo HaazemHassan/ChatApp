@@ -21,5 +21,21 @@ export class ApplicationUserService {
       );
   }
 
+  checkUsernameAvailability(username: string): Observable<boolean> {
+    return this.http
+      .get<ApiResponse<boolean>>(`${this.apiUrl}/ApplicationUser/check-username?username=${username}`)
+      .pipe(
+        map((res) => res.data ?? false),
+      );
+  }
+
+  checkEmailAvailability(email: string): Observable<boolean> {
+    return this.http
+      .get<ApiResponse<boolean>>(`${this.apiUrl}/ApplicationUser/check-email?email=${email}`)
+      .pipe(
+        map((res) => res.data ?? false),
+      );
+  }
+
 }
 

@@ -18,6 +18,7 @@ import { AuthenticationService } from '../../services/authentication.service';
 export class LoginComponent {
   loginForm: FormGroup;
   returnUrl: string = '/conversations';
+  errorMessage: string = '';
 
   constructor(
     private authService: AuthenticationService,
@@ -39,6 +40,7 @@ export class LoginComponent {
 
   login(): void {
     if (this.loginForm.valid) {
+      this.errorMessage = ''; // Clear previous errors
       const credentials: LoginRequest = {
         username: this.loginForm.get('username')?.value,
         password: this.loginForm.get('password')?.value,
@@ -50,10 +52,12 @@ export class LoginComponent {
             console.log('Login successful');
             this.router.navigateByUrl(this.returnUrl);
           } else {
+            this.errorMessage = response.message || 'Login failed. Please try again.';
             console.error('Login failed:', response.message);
           }
         },
         error: (error) => {
+          this.errorMessage = error.message || 'An error occurred during login. Please try again.';
           console.error('Login error:', error);
         },
       });
