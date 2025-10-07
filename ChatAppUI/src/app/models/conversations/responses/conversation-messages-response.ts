@@ -5,6 +5,10 @@ export interface ConversationMessagesResponse {
   conversationId: number;
   conversationTitle?: string;
   messages: MessageResponse[];
+  hasMore: boolean;
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
 }
 
 export interface MessageResponse {

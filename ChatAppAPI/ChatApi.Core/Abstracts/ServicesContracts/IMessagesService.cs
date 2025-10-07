@@ -18,6 +18,8 @@ namespace ChatApi.Core.Abstracts.ServicesContracts {
         Task<bool> AreAllParticipantsDeliveredAsync(Message message, DeliveryStatus requiredStatus);
         DeliveryStatus GetDeliveryStatus(Message message);
         Task<int> GetUnreadMessagesCountAsync(int conversationId, int userId);
+        Task<int> GetConversationMessagesCountAsync(int conversationId);
+        Task<List<int>> GetUnreadMessageIdsForConversationAsync(int conversationId, int userId);
 
     }
 }

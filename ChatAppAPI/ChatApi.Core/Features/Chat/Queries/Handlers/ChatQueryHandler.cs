@@ -73,10 +73,18 @@ namespace ChatApi.Core.Features.Chat.Queries.Handlers {
                 }
             }
 
+            // Get total count for pagination
+            var totalCount = await _messagesService.GetConversationMessagesCountAsync(request.ConversationId);
+            var hasMore = (request.Skip + request.Take) < totalCount;
+
             var response = new GetConversationMessagesResponse {
                 ConversationId = request.ConversationId,
                 ConversationTitle = await _conversationsService.GetConversationTitle(conversation.Id),
                 Messages = messageResponses,
+                TotalCount = totalCount,
+                HasMore = hasMore,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize
             };
 
             return Success(response);

@@ -16,8 +16,8 @@ namespace ChatApi.Infrastructure.Repositories {
                 .Include(m => m.Conversation)
                     .ThenInclude(c => c.Participants)
                 .OrderBy(m => m.SentAt)
-                .Skip(0)
-                .Take(200)
+                .Skip(skip)
+                .Take(take)
                 .ToListAsync();
         }
 
@@ -30,9 +30,9 @@ namespace ChatApi.Infrastructure.Repositories {
                 .Include(m => m.Conversation)
                     .ThenInclude(c => c.Participants)
                 .Include(m => m.MessageDeliveries.Where(md => md.UserId != userId))
-                .OrderBy(m => m.SentAt)
-                .Skip(0)
-                .Take(200)
+                .OrderByDescending(m => m.SentAt)
+                .Skip(skip)
+                .Take(take)
                 .ToListAsync();
         }
 
@@ -61,6 +61,21 @@ namespace ChatApi.Infrastructure.Repositories {
                 .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted);
         }
 
+        public async Task<int> GetConversationMessagesCountAsync(int conversationId) {
+            return await _dbContext.Messages
+                .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
+                .CountAsync();
+        }
+
+        public async Task<List<int>> GetUnreadMessageIdsForConversationAsync(int conversationId, int userId) {
+            return await _dbContext.Messages
+                .Where(m => m.ConversationId == conversationId
+                    && !m.IsDeleted
+                    && m.SenderId != userId
+                    && m.MessageDeliveries.Any(md => md.UserId == userId && md.Status != Core.Enums.ChatEnums.DeliveryStatus.Read))
+                .Select(m => m.Id)
+                .ToListAsync();
+        }
 
     }
 }

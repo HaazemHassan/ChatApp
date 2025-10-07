@@ -384,5 +384,13 @@ namespace ChatApi.Services.Services {
                 return false;
             }
         }
+
+        public async Task<int> GetConversationMessagesCountAsync(int conversationId) {
+            return await _messageRepository.GetConversationMessagesCountAsync(conversationId);
+        }
+
+        public async Task<List<int>> GetUnreadMessageIdsForConversationAsync(int conversationId, int userId) {
+            return await _messageRepository.GetUnreadMessageIdsForConversationAsync(conversationId, userId);
+        }
     }
 }

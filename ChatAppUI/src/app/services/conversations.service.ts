@@ -42,11 +42,19 @@ export class ConversationsService {
 
 
   getConversationMessages(
-    conversationId: number
+    conversationId: number,
+    pageNumber: number = 1,
+    pageSize: number = 20
   ): Observable<ConversationMessagesResponse> {
     return this.http
       .get<ApiResponse<ConversationMessagesResponse>>(
-        `${this.apiUrl}/chat/conversations/${conversationId}/messages`
+        `${this.apiUrl}/chat/conversations/${conversationId}/messages`,
+        {
+          params: {
+            pageNumber: pageNumber.toString(),
+            pageSize: pageSize.toString()
+          }
+        }
       )
       .pipe(
         map((res) => res.data!),

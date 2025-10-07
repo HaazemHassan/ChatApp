@@ -84,6 +84,10 @@ export class ChatHubService {
     return this.hubConnection.invoke('MessagesRead', messageIds);
   }
 
+  MarkConversationAsRead(conversationId: number): Promise<void> {
+    return this.hubConnection.invoke('MarkConversationAsRead', conversationId);
+  }
+
   onMessagesRead(callback: (messageIds: number[]) => void) {
     this.hubConnection.on('MessagesRead', callback);
   }

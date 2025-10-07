@@ -7,9 +7,12 @@ import {
 import {
   Component,
   OnInit,
+  OnDestroy,
+  AfterViewInit,
   ViewChild,
   ElementRef,
   AfterViewChecked,
+  Renderer2,
   input,
   effect,
   output,
@@ -38,13 +41,22 @@ import { ConversationType } from '../../../enums/conversation-type';
   templateUrl: './conversation-window.component.html',
   styleUrl: './conversation-window.component.css',
 })
-export class ConversationWindowComponent implements OnInit, AfterViewChecked {
+export class ConversationWindowComponent implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {
   @ViewChild('messagesList', { static: false }) messagesList!: ElementRef;
   loading = false;
+  loadingMore = false;
   error: string | null = null;
   private shouldScrollToBottom = false;
   currentUserId: number | null = null;
   prevConversationId: number | null = null;
+  private scrollUnlistener?: () => void;
+  private isScrollListenerAttached = false;
+
+  // Pagination
+  currentPage = 1;
+  pageSize = 20;
+  hasMore = false;
+  totalCount = 0;
 
   MessageType = MessageType;
   ConversationType = ConversationType;
@@ -60,14 +72,18 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
   constructor(
     private conversationsService: ConversationsService,
     private chatHubService: ChatHubService,
-    private authService: AuthenticationService
+    private authService: AuthenticationService,
+    private renderer: Renderer2
   ) {
 
     effect(() => {
       const id = this.conversation().id;
       if (id && id !== this.prevConversationId) {
         this.prevConversationId = id;
-        this.loadMessages();
+        this.resetPaginationState();
+        this.detachScrollListener();
+        this.attachScrollListener();
+        this.loadInitialMessages();
       }
     });
 
@@ -107,31 +123,72 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
     });
   }
 
+  ngAfterViewInit(): void {
+    this.attachScrollListener();
+  }
 
-  private loadMessages(): void {
-    console.log('Loading messages for conversation:', this.conversation());
+  ngOnDestroy(): void {
+    this.detachScrollListener();
+  }
 
+  private attachScrollListener(): void {
+    setTimeout(() => {
+      if (this.messagesList?.nativeElement && !this.isScrollListenerAttached) {
+        this.scrollUnlistener = this.renderer.listen(
+          this.messagesList.nativeElement,
+          'scroll',
+          this.onScroll.bind(this)
+        );
+        this.isScrollListenerAttached = true;
+      }
+    }, 200);
+  }
+
+  private detachScrollListener(): void {
+    if (this.scrollUnlistener) {
+      this.scrollUnlistener();
+      this.scrollUnlistener = undefined;
+    }
+    this.isScrollListenerAttached = false;
+  }
+
+  private onScroll(): void {
+    const scrollContainer = this.messagesList?.nativeElement;
+    if (!scrollContainer) {
+      console.log('No scroll container in onScroll');
+      return;
+    }
+
+    const scrollTop = scrollContainer.scrollTop;
+    const threshold = 50;
+
+    if (scrollTop <= threshold && this.hasMore && !this.loadingMore && !this.loading)
+      this.loadMoreMessages();
+
+  }
+
+
+  private loadInitialMessages(): void {
     if (!this.conversation() || !this.conversation().id) return;
 
     this.loading = true;
     this.error = null;
 
     this.conversationsService
-      .getConversationMessages(this.conversation().id!)
+      .getConversationMessages(this.conversation().id!, this.currentPage, this.pageSize)
       .subscribe({
         next: (response: ConversationMessagesResponse) => {
-          this.messages = response.messages || [];
+          this.messages = (response.messages || []).reverse();
+          this.hasMore = response.hasMore;
+          this.totalCount = response.totalCount;
+          this.currentPage = response.pageNumber;
           this.loading = false;
           this.shouldScrollToBottom = true;
           this.groupMessagesByDate();
 
-          const othersMessages = this.messages.filter(m => m.senderId !== this.currentUserId && m.deliveryStatus !== DeliveryStatus.Read);
-          console.log('Others messages needing read update:', othersMessages);
-          if (othersMessages.length !== 0) {
-            this.chatHubService.NotifyMessagesRead(othersMessages.map(m => m.id)).catch(err => {
-              console.error('Error notifying messages read:', err);
-            });
-          }
+          this.chatHubService.MarkConversationAsRead(this.conversation().id!).catch(err => {
+            console.error('Error marking conversation as read:', err);
+          });
 
         },
         error: (err) => {
@@ -166,14 +223,12 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
     this.chatHubService.sendMessage(request).then(() => {
 
     }).catch((err) => {
-      console.error('Error sending message via SignalR:', err);
       this.error = 'Failed to send message. Please try again.';
       this.messageText = originalText;
     });
   }
 
   isOnline = computed(() => {
-    console.log('Checking online status for conversation:', this.conversation());
     if (this.conversation().type === ConversationType.Direct)
       return this.conversationsService.IsOtherParticipantOnline(this.conversation().participants);
     return null;   // For group conversations, online status is not applicable
@@ -287,6 +342,60 @@ export class ConversationWindowComponent implements OnInit, AfterViewChecked {
       const year = date.getFullYear();
       return `${day}/${month}/${year}`;
     }
+  }
+
+  loadMoreMessages(): void {
+    if (!this.hasMore || this.loadingMore || !this.conversation().id) return;
+
+    this.loadingMore = true;
+    const nextPage = this.currentPage + 1;
+
+    const scrollContainer = this.messagesList?.nativeElement;
+    if (!scrollContainer) {
+      this.loadingMore = false;
+      return;
+    }
+
+    const oldScrollHeight = scrollContainer.scrollHeight;
+    const oldScrollTop = scrollContainer.scrollTop;
+
+    this.conversationsService
+      .getConversationMessages(this.conversation().id!, nextPage, this.pageSize)
+      .subscribe({
+        next: (response: ConversationMessagesResponse) => {
+          // Reverse older messages and prepend them to the beginning
+          const olderMessages = (response.messages || []).reverse();
+          this.messages = [...olderMessages, ...this.messages];
+          this.hasMore = response.hasMore;
+          this.totalCount = response.totalCount;
+          this.currentPage = response.pageNumber;
+          this.loadingMore = false;
+
+          // Re-group all messages
+          this.groupMessagesByDate();
+
+
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const newScrollHeight = scrollContainer.scrollHeight;
+              const heightDifference = newScrollHeight - oldScrollHeight;
+              scrollContainer.scrollTop = oldScrollTop + heightDifference;
+            });
+          });
+        },
+        error: (err) => {
+          this.loadingMore = false;
+          console.error('Error loading more messages:', err);
+        },
+      });
+  }
+
+  private resetPaginationState(): void {
+    this.currentPage = 1;
+    this.hasMore = false;
+    this.totalCount = 0;
+    this.messages = [];
+    this.groupedMessages = [];
   }
 
 }

@@ -7,5 +7,7 @@ namespace ChatApi.Core.Abstracts.InfrastructureAbstracts {
         Task<Message?> GetMessageWithRepliesAsync(int messageId);
         Task<Message?> GetMessageWithSenderAsync(int messageId);
         Task<Message?> GetMessageWithDeliveryAsync(int messageId, int userId);
+        Task<int> GetConversationMessagesCountAsync(int conversationId);
+        Task<List<int>> GetUnreadMessageIdsForConversationAsync(int conversationId, int userId);
     }
 }

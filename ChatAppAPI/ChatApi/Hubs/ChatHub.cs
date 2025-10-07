@@ -263,6 +263,18 @@ namespace ChatApi.Hubs {
                 await Clients.Caller.SendAsync("Error", response.Message);
             }
         }
+
+        public async Task MarkConversationAsRead(int conversationId) {
+            var userId = _currentUserService.UserId!.Value;
+
+            // Get all unread message IDs for this conversation
+            var unreadMessageIds = await _messagesService.GetUnreadMessageIdsForConversationAsync(conversationId, userId);
+
+            if (unreadMessageIds.Any()) {
+                // Mark them all as read
+                await MessagesRead(unreadMessageIds);
+            }
+        }
         #endregion
 
 

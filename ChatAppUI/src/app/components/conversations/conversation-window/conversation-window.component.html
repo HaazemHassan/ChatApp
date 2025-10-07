@@ -33,7 +33,6 @@
     @if (!loading && !error && messages.length > 0) {
     <div #messagesList class="messages-list">
       @for (group of groupedMessages; track group.date) {
-      <!-- Date Separator -->
       <div class="date-separator">
         <span class="date-label">{{ group.date }}</span>
       </div>
