@@ -23,7 +23,6 @@ export class ConversationItemComponent {
   constructor() {
     effect(() => {
       const convo = this.conversation();
-      console.log('Conversation item', convo);
     });
   }
 

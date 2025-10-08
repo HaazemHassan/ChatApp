@@ -54,11 +54,11 @@ export class ConversationsComponent implements OnInit {
     });
 
     this.chatHubService.onNewDirectConversationInfo((newConversation: UserConversation) => {
-      console.log('Received new direct conversation info via SignalR:', newConversation);
       this.handleNewDirectConversationInfoReceived(newConversation);
     });
 
     this.chatHubService.onReceiveMessage(async (message: MessageResponse) => {
+      console.log('Received message via SignalR:', message);
       this.handleMessageReceived(message);
       try {
         const currentUserId = this.authService.getCurrentUser()?.id;
@@ -79,6 +79,9 @@ export class ConversationsComponent implements OnInit {
       } catch (err) {
         console.error('Error notifying messages delivered:', err);
       }
+
+      this.others = this.others.filter(otherConv => otherConv.id !== message.conversationId);
+
     });
 
 
@@ -92,33 +95,26 @@ export class ConversationsComponent implements OnInit {
   }
 
   private handleNewConversationReceived(newConversation: UserConversation): void {
-    const existingConversation = this.conversations.find(conv =>
-      conv.id === newConversation.id
-    );
-    if (!existingConversation)
-      this.conversations = [newConversation, ...this.conversations];
+    if (!this.existInConversations(newConversation)) {
+      this.addConversationToTop(newConversation);
+    }
+
+    this.others = this.others.filter(otherConv => this.checkIfTheSameDirectConversation(newConversation, otherConv) ? false : true);
   }
 
   private handleNewDirectConversationInfoReceived(newConversation: UserConversation): void {
-    this.others = [newConversation];
-    if (this.checkIfTheSameDirectConversation(this.selectedConversation, newConversation))
-      Object.assign(this.selectedConversation!, newConversation);
-    else {
-      this.selectedConversation = newConversation;
-    }
+    this.selectedConversation = newConversation;
   }
 
 
   private handleMessageReceived(message: MessageResponse): void {
-    const conversation = this.conversations.find(conv => conv.id === message.conversationId);
+    const conversation = this.findConversationById(message.conversationId);
 
     if (conversation) {
-      // create new object instead of modifying existing one to ensure change detection
       const updatedConversation = { ...conversation, lastMessage: message };
-      this.conversations = this.conversations.filter(conv => conv.id !== message.conversationId);
-      this.conversations = [updatedConversation, ...this.conversations];
+      this.removeConversationById(message.conversationId);
+      this.addConversationToTop(updatedConversation);
 
-      // If this is the currently selected conversation, we want to add this message in the conversation window
       if (this.selectedConversation && this.selectedConversation.id === message.conversationId) {
         this.newMessage = message;
       }
@@ -126,12 +122,15 @@ export class ConversationsComponent implements OnInit {
       this.conversationsService.getConversationById(message.conversationId).subscribe({
         next: (conv) => {
           if (conv) {
-            console.log('Fetched conversation for new message:', conv);
             if (this.selectedConversation?.id == conv.id) {
               this.newMessage = message;
-              this.others = this.others.filter(otherConv => otherConv.id !== conv.id);
             }
-            this.conversations = [conv, ...this.conversations];
+            this.addConversationToTop(conv);
+
+            // Remove from others list to prevent race condition with search
+            this.others = this.others.filter(otherConv =>
+              !this.checkIfTheSameDirectConversation(conv, otherConv)
+            );
           }
         },
         error: (error) => {
@@ -153,9 +152,7 @@ export class ConversationsComponent implements OnInit {
         );
         const updatedConversation = { ...conversation, participants: updatedParticipants };
 
-        this.conversations = this.conversations.map(conv =>
-          conv.id === updatedConversation.id ? updatedConversation : conv
-        );
+        this.updateConversationInList(updatedConversation);
 
         if (this.selectedConversation && this.selectedConversation.id === updatedConversation.id) {
           this.selectedConversation = updatedConversation;
@@ -163,7 +160,6 @@ export class ConversationsComponent implements OnInit {
       }
     }
   }
-
 
 
   private checkIfTheSameDirectConversation(firstConversation: UserConversation | null, secondConversation: UserConversation | null): boolean {
@@ -177,6 +173,72 @@ export class ConversationsComponent implements OnInit {
   }
 
   private handleMessagesDelivered(messageIds: number[]): void {
+    this.updateConversationsDeliveryStatus(messageIds);
+    this.updateNewMessageDeliveryStatus(messageIds);
+  }
+
+  onConversationSelected(conversation: UserConversation) {
+    console.log('Conversation selected:', conversation);
+    if (!conversation.id) {
+      this.chatHubService.createConversation(
+        conversation.participants.map(p => p.userId),
+        null,
+        conversation.type
+      ).catch(err => {
+        console.error('Error creating new conversation:', err);
+      });
+    }
+    else {
+      this.selectedConversation = conversation;
+    }
+  }
+
+  onSearchChanged(searchValue: string) {
+    this.others = [];
+    this.conversationsService.getOtherConversations(searchValue).subscribe({
+      next: (conversation) => {
+        if (!this.existInConversations(conversation)) {
+          this.others = [conversation];
+        }
+      },
+      error: (error) => {
+        console.log('User not found or error occurred:', error);
+      }
+    });
+  }
+
+  updateUnreadCountForConversation(conversationId: number) {
+    const conversation = this.findConversationById(conversationId);
+    if (conversation) {
+      const updatedConversation = { ...conversation, unreadCount: conversation.unreadCount + 1 };
+      this.updateConversationInList(updatedConversation);
+    }
+  }
+
+  // Helper Functions
+  private findConversationById(conversationId: number): UserConversation | undefined {
+    return this.conversations.find(conv => conv.id === conversationId);
+  }
+
+  private existInConversations(conversation: UserConversation): boolean {
+    return this.conversations.some(conv => conv.id === conversation.id);
+  }
+
+  private updateConversationInList(updatedConversation: UserConversation): void {
+    this.conversations = this.conversations.map(conv =>
+      conv.id === updatedConversation.id ? updatedConversation : conv
+    );
+  }
+
+  private addConversationToTop(conversation: UserConversation): void {
+    this.conversations = [conversation, ...this.conversations];
+  }
+
+  private removeConversationById(conversationId: number): void {
+    this.conversations = this.conversations.filter(conv => conv.id !== conversationId);
+  }
+
+  private updateConversationsDeliveryStatus(messageIds: number[]): void {
     this.conversations = this.conversations.map(conversation => {
       if (conversation.lastMessage &&
         messageIds.includes(conversation.lastMessage.id) &&
@@ -186,15 +248,13 @@ export class ConversationsComponent implements OnInit {
           ...conversation.lastMessage,
           deliveryStatus: DeliveryStatus.Delivered
         };
-        return {
-          ...conversation,
-          lastMessage: updatedLastMessage
-        };
+        return { ...conversation, lastMessage: updatedLastMessage };
       }
       return conversation;
     });
+  }
 
-    // Also update the newMessage if it matches any of the messageIds
+  private updateNewMessageDeliveryStatus(messageIds: number[]): void {
     if (this.newMessage &&
       messageIds.includes(this.newMessage.id) &&
       this.newMessage.deliveryStatus === DeliveryStatus.Sent) {
@@ -206,48 +266,6 @@ export class ConversationsComponent implements OnInit {
   }
 
 
-
-
-  onConversationSelected(conversation: UserConversation) {
-    console.log('Conversation selected:', conversation);
-    if (!conversation.id) {
-      this.chatHubService.createConversation(
-        conversation.participants.map(p => p.userId),
-        null,
-        conversation.type
-      ).then(() => {
-      }).catch(err => {
-        console.error('Error creating new conversation:', err);
-      });
-    }
-    else
-      this.selectedConversation = conversation;
-  }
-
-  onSearchChanged(searchValue: string) {
-    this.others = [];
-    this.conversationsService.getOtherConversations(searchValue).subscribe({
-      next: (conversation) => {
-        this.others = [conversation];
-        console.log('Fetched other conversation in conversations component:', this.others);
-      },
-      error: (error) => {
-        console.log('User not found or error occurred:', error);
-      }
-    });
-  }
-
-
-  updateUnreadCountForConversation(conversationId: number) {
-    const conversation = this.conversations.find(conv => conv.id === conversationId);
-    if (conversation) {
-      const updatedConversation = { ...conversation, unreadCount: conversation.unreadCount + 1 };
-      this.conversations = this.conversations.map(conv =>
-        conv.id === updatedConversation.id ? updatedConversation : conv
-      );
-    }
-
-  }
 
 }
 

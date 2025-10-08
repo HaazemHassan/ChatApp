@@ -155,7 +155,6 @@ export class ConversationWindowComponent implements OnInit, OnDestroy, AfterView
   private onScroll(): void {
     const scrollContainer = this.messagesList?.nativeElement;
     if (!scrollContainer) {
-      console.log('No scroll container in onScroll');
       return;
     }
 
@@ -221,7 +220,6 @@ export class ConversationWindowComponent implements OnInit, OnDestroy, AfterView
     };
 
     this.chatHubService.sendMessage(request).then(() => {
-
     }).catch((err) => {
       this.error = 'Failed to send message. Please try again.';
       this.messageText = originalText;
