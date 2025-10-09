@@ -32,10 +32,12 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build images with Docker Compose
+        working-directory: ./ChatAppAPI
         run: docker compose -f docker-compose.yml -f docker-compose.override.yml build
 
       - name: List Docker Images
         run: docker images
       
       - name: Push images to Docker Hub
+        working-directory: ./ChatAppAPI
         run: docker compose -f docker-compose.yml -f docker-compose.override.yml push
