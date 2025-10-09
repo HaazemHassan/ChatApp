@@ -6,6 +6,7 @@ import { UserConversation } from '../models/conversations/responses/user-convers
 import { MessageType } from '../enums/message-type';
 import { ConversationType } from '../enums/conversation-type';
 import { SendMessageRequest } from '../models/conversations/requests/send-message-request';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -21,8 +22,15 @@ export class ChatHubService {
       console.error('No access token found. User might not be authenticated.');
       return;
     }
+    // Use environment-based URL - in production it will use relative path '/chatHub'
+    const hubUrl = environment.production
+      ? '/chatHub'  // Relative URL for production (will use nginx proxy)
+      : 'https://localhost:44318/chatHub';  // Direct URL for development
+
+
+
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('https://localhost:44318/chatHub', {
+      .withUrl(hubUrl, {
         accessTokenFactory: () => token!
       })
       .withAutomaticReconnect()

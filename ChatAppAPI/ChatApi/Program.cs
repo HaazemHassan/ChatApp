@@ -28,13 +28,18 @@ namespace ChatApi {
 
 
 
+
             var myOrigin = "AngularChatApp";
             builder.Services.AddCors(options => {
                 options.AddPolicy(name: myOrigin, policy => {
                     policy.AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials() //this line is important for SignalR
-                          .WithOrigins("http://localhost:5000");
+                          .WithOrigins(
+                              "http://localhost:4200",      // Development (Angular CLI - ng serve)
+                              "http://localhost:5000",      // Docker/Production (nginx)
+                              "https://localhost:44318"     // Development (HTTPS)
+                          );
                 });
             });
 

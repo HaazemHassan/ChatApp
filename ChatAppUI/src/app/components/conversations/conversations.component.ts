@@ -173,7 +173,7 @@ export class ConversationsComponent implements OnInit {
   }
 
   private handleMessagesDelivered(messageIds: number[]): void {
-    this.updateConversationsDeliveryStatus(messageIds);
+    this.updateConversationsMessagesDeliveryStatus(messageIds);
     this.updateNewMessageDeliveryStatus(messageIds);
   }
 
@@ -238,7 +238,7 @@ export class ConversationsComponent implements OnInit {
     this.conversations = this.conversations.filter(conv => conv.id !== conversationId);
   }
 
-  private updateConversationsDeliveryStatus(messageIds: number[]): void {
+  private updateConversationsMessagesDeliveryStatus(messageIds: number[]): void {
     this.conversations = this.conversations.map(conversation => {
       if (conversation.lastMessage &&
         messageIds.includes(conversation.lastMessage.id) &&

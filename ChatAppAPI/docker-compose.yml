@@ -1,0 +1,35 @@
+name: chatapi-project
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: chatapi-sqlserver
+    networks:
+      - chatapi-network
+
+  chatapi:
+    image: ${DOCKER_REGISTRY-}chatapi:${IMAGE_TAG:-latest}
+    container_name: chatapi-app
+    build:
+      context: .
+      dockerfile: ChatApi/Dockerfile
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - chatapi-network
+
+  chatappui:
+    image: ${DOCKER_REGISTRY-}chatappui:${IMAGE_TAG:-latest}
+    container_name: chatapp-ui
+    build:
+      context: ../ChatAppUI
+      dockerfile: Dockerfile
+    depends_on:
+      - chatapi
+    networks:
+      - chatapi-network
+
+networks:
+  chatapi-network:
+    driver: bridge

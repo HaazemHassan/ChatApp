@@ -1,0 +1,47 @@
+services:
+  sqlserver:
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${DB_PASSWORD}
+      - MSSQL_PID=Express
+      - MSSQL_TCP_PORT=1433
+    ports:
+      - "15000:1433"
+    volumes:
+      - chatapi_sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${DB_PASSWORD} -C -Q 'SELECT 1' || exit 1",
+        ]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+  chatapi:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # - ASPNETCORE_HTTP_PORTS=8080
+      # - ASPNETCORE_HTTPS_PORTS=8081
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=${DB_SERVER},${DB_PORT};Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=True;
+      - jwtSettings__Secret=${JWT_SECRET}
+      - jwtSettings__Issuer=${JWT_ISSUER}
+      - jwtSettings__Audience=${JWT_AUDIENCE}
+    ports:
+      - "44000:8080"
+      # - "44001:8081"  disable https in dev for simplicity
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+
+  chatappui:
+    ports:
+      - "5000:80"
+
+volumes:
+  chatapi_sqlserver_data:
+    name: chatapi_sqlserver_data
+    driver: local
