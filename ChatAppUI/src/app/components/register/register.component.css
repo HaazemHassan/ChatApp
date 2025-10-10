@@ -77,7 +77,10 @@
   border-radius: var(--radius-md);
   font-size: 0.95rem;
   transition: all 0.3s ease;
-  background: #fafafa;
+  background: #ffffff;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
 }
 
 .form-input:focus {
