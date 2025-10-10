@@ -1,6 +1,3 @@
-# Docker Compose Production Configuration
-# This file is designed for end-users to run the ChatApp from Docker Hub images
-#
 # Usage:
 #   1. Create a .env file with your configuration (see .env.example)
 #   2. Run: docker-compose -f docker-compose.production.yml up -d
@@ -9,7 +6,6 @@
 name: chatapp-production
 
 services:
-  # SQL Server Database
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: chatapp-sqlserver
@@ -36,9 +32,8 @@ services:
       timeout: 5s
     restart: unless-stopped
 
-  # Backend API
   chatapi:
-    image: ${DOCKER_USERNAME}/chatapi:${IMAGE_TAG:-latest}
+    image: hazemhassan1/chatapi:latest
     container_name: chatapp-api
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -56,9 +51,8 @@ services:
       - chatapp-network
     restart: unless-stopped
 
-  # Frontend UI
   chatappui:
-    image: ${DOCKER_USERNAME}/chatappui:${IMAGE_TAG:-latest}
+    image: hazemhassan1/chatappui:latest
     container_name: chatapp-ui
     ports:
       - "${UI_EXTERNAL_PORT:-5000}:80"
