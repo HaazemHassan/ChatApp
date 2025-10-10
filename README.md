@@ -11,40 +11,37 @@ A real-time chat application built with .NET for the backend and Angular for the
 
 ## Screenshots
 
-<table>
-  <tr>
-    <td align="center"><strong>Home</strong></td>
-    <td align="center"><strong>Register</strong></td>
-  </tr>
-  <tr>
-    <td><img src="assets/app-screenshots/home.png" alt="Home Page" width="400"/></td>
-    <td><img src="assets/app-screenshots/register.png" alt="Register Page" width="400"/></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Login</strong></td>
-    <td align="center"><strong>Conversations</strong></td>
-  </tr>
-  <tr>
-    <td><img src="assets/app-screenshots/login.png" alt="Login Page" width="400"/></td>
-    <td><img src="assets/app-screenshots/conversations.png" alt="Conversations Page" width="400"/></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Direct Conversation</strong></td>
-    <td align="center"><strong>Group Conversation</strong></td>
-  </tr>
-  <tr>
-    <td><img src="assets/app-screenshots/direct-conversation-window.png" alt="Direct Conversation Window" width="400"/></td>
-    <td><img src="assets/app-screenshots/group-conversation-window.png" alt="Group Conversation Window" width="400"/></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Create Group</strong></td>
-    <td align="center"><strong>Search New User</strong></td>
-  </tr>
-  <tr>
-    <td><img src="assets/app-screenshots/create-group.png" alt="Create Group Page" width="400"/></td>
-    <td><img src="assets/app-screenshots/search-new-user.png" alt="Search New User Page" width="400"/></td>
-  </tr>
-</table>
+### Home Page
+Welcome to ChatApp! This is the main landing page of the application.
+![Home Page](assets/app-screenshots/home.png)
+
+### User Registration
+New users can create an account to start using the chat features.
+![Register Page](assets/app-screenshots/register.png)
+
+### User Login
+Existing users can log in to access their conversations.
+![Login Page](assets/app-screenshots/login.png)
+
+### Conversations List
+View all your recent one-on-one and group conversations in one place.
+![Conversations Page](assets/app-screenshots/conversations.png)
+
+### Direct Conversation
+Engage in a private, real-time chat with another user.
+![Direct Conversation Window](assets/app-screenshots/direct-conversation-window.png)
+
+### Group Conversation
+Collaborate and chat with multiple users in a group.
+![Group Conversation Window](assets/app-screenshots/group-conversation-window.png)
+
+### Create a New Group
+Easily create new group chats and add members.
+![Create Group Page](assets/app-screenshots/create-group.png)
+
+### Find New Users
+Search for and connect with new users on the platform.
+![Search New User Page](assets/app-screenshots/search-new-user.png)
 
 ## Technologies Used
 
