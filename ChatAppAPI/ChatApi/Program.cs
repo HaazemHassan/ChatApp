@@ -57,12 +57,22 @@ namespace ChatApi {
             using (var scope = app.Services.CreateScope()) {
 
                 var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                
+                // Ensure database is created and apply all pending migrations
                 try {
-                  await context.Database.MigrateAsync();
+                    Console.WriteLine("Checking database connection...");
+                    await context.Database.EnsureCreatedAsync(); // Create DB if not exists
+                    Console.WriteLine("Applying migrations...");
+                    await context.Database.MigrateAsync(); // Apply migrations
+                    Console.WriteLine("Database ready!");
                 }
                 catch (SqlException ex) when (ex.Number == 2714) // Object already exists
                 {
                     Console.WriteLine("Tables already exist, skipping migration");
+                }
+                catch (Exception ex) {
+                    Console.WriteLine($"Database migration error: {ex.Message}");
+                    throw;
                 }
 
                 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
