@@ -13,34 +13,42 @@ A real-time chat application built with .NET for the backend and Angular for the
 
 ### Home Page
 Welcome to ChatApp! This is the main landing page of the application.
+
 ![Home Page](assets/app-screenshots/home.png)
 
 ### User Registration
 New users can create an account to start using the chat features.
+
 ![Register Page](assets/app-screenshots/register.png)
 
 ### User Login
 Existing users can log in to access their conversations.
+
 ![Login Page](assets/app-screenshots/login.png)
 
 ### Conversations List
 View all your recent one-on-one and group conversations in one place.
+
 ![Conversations Page](assets/app-screenshots/conversations.png)
 
 ### Direct Conversation
 Engage in a private, real-time chat with another user.
+
 ![Direct Conversation Window](assets/app-screenshots/direct-conversation-window.png)
 
 ### Group Conversation
 Collaborate and chat with multiple users in a group.
+
 ![Group Conversation Window](assets/app-screenshots/group-conversation-window.png)
 
 ### Create a New Group
 Easily create new group chats and add members.
+
 ![Create Group Page](assets/app-screenshots/create-group.png)
 
 ### Find New Users
 Search for and connect with new users on the platform.
+
 ![Search New User Page](assets/app-screenshots/search-new-user.png)
 
 ## Technologies Used
