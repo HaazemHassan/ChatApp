@@ -9,6 +9,43 @@ A real-time chat application built with .NET for the backend and Angular for the
 - Create and manage conversations and groups.
 - Interactive user interface.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><strong>Home</strong></td>
+    <td align="center"><strong>Register</strong></td>
+  </tr>
+  <tr>
+    <td><img src="assets/app-screenshots/home.png" alt="Home Page" width="400"/></td>
+    <td><img src="assets/app-screenshots/register.png" alt="Register Page" width="400"/></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Login</strong></td>
+    <td align="center"><strong>Conversations</strong></td>
+  </tr>
+  <tr>
+    <td><img src="assets/app-screenshots/login.png" alt="Login Page" width="400"/></td>
+    <td><img src="assets/app-screenshots/conversations.png" alt="Conversations Page" width="400"/></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Direct Conversation</strong></td>
+    <td align="center"><strong>Group Conversation</strong></td>
+  </tr>
+  <tr>
+    <td><img src="assets/app-screenshots/direct-conversation-window.png" alt="Direct Conversation Window" width="400"/></td>
+    <td><img src="assets/app-screenshots/group-conversation-window.png" alt="Group Conversation Window" width="400"/></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Create Group</strong></td>
+    <td align="center"><strong>Search New User</strong></td>
+  </tr>
+  <tr>
+    <td><img src="assets/app-screenshots/create-group.png" alt="Create Group Page" width="400"/></td>
+    <td><img src="assets/app-screenshots/search-new-user.png" alt="Search New User Page" width="400"/></td>
+  </tr>
+</table>
+
 ## Technologies Used
 
 ### Backend
@@ -67,5 +104,5 @@ This is the simplest way to get the application running. You only need Docker an
     ```
     This command will download the pre-built Docker images and start the application, database, and all required services.
 
-    - The **frontend** will be available at: `http://localhost:5000`
+    - The **frontend** will be available at: `http://localhost:5000` 
     - The **backend** will be available at: `http://localhost:44000`
