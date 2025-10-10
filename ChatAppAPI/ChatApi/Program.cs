@@ -6,8 +6,11 @@ using ChatApi.Core.Middlewares;
 using ChatApi.Extentions;
 using ChatApi.Hubs;
 using ChatApi.Infrastructure;
+using ChatApi.Infrastructure.Data;
 using ChatApi.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 
 namespace ChatApi {
@@ -52,6 +55,16 @@ namespace ChatApi {
 
             #region Configure Data
             using (var scope = app.Services.CreateScope()) {
+
+                var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                try {
+                  await context.Database.MigrateAsync();
+                }
+                catch (SqlException ex) when (ex.Number == 2714) // Object already exists
+                {
+                    Console.WriteLine("Tables already exist, skipping migration");
+                }
+
                 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                 var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
                 var userConnectionRepository = scope.ServiceProvider.GetRequiredService<IUserConnectionRepository>();
