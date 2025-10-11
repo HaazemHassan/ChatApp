@@ -1,11 +1,13 @@
 ﻿using ChatApi.Core.Bases;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Net;
 
 namespace ChatApi.Bases {
     [Route("api/[controller]")]
     [ApiController]
+    [EnableRateLimiting("defaultLimiter")]
     public class BaseController : ControllerBase {
 
         protected IMediator mediator;

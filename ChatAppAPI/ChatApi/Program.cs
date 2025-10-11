@@ -9,9 +9,11 @@ using ChatApi.Infrastructure;
 using ChatApi.Infrastructure.Data;
 using ChatApi.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using System.Threading.RateLimiting;
 
 namespace ChatApi {
     public class Program {
@@ -48,6 +50,48 @@ namespace ChatApi {
 
             builder.Services.AddSignalR();
 
+            #region RATE LIMITING CONFIGURATIONS
+            builder.Services.AddRateLimiter(options => {
+                options.AddSlidingWindowLimiter("defaultLimiter", opt => {
+                    opt.Window = TimeSpan.FromMinutes(1);
+                    opt.PermitLimit = 100;
+                    opt.QueueLimit = 10;
+                    opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                    opt.SegmentsPerWindow = 4;
+                });
+
+                options.AddSlidingWindowLimiter("loginLimiter", opt => {
+                    opt.Window = TimeSpan.FromMinutes(1);
+                    opt.PermitLimit = 5;
+                    opt.QueueLimit = 0;
+                    opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                    opt.SegmentsPerWindow = 4;
+                });
+
+                options.OnRejected = async (context, token) => {
+                    var endpoint = context.HttpContext.GetEndpoint();
+                    var rateLimiterAttribute = endpoint?.Metadata.GetMetadata<EnableRateLimitingAttribute>();
+                    var policyName = rateLimiterAttribute?.PolicyName;
+
+                    context.HttpContext.Response.StatusCode = 429;
+
+                    switch (policyName) {
+                        case "loginLimiter":
+                        await context.HttpContext.Response.WriteAsync(
+                            "Too many login attempts. Please try again later.", token);
+                        break;
+
+
+                        default:
+                        await context.HttpContext.Response.WriteAsync(
+                            "Too many requests. Please try again later.", token);
+                        break;
+                    }
+                };
+
+            });
+            #endregion
+
             var app = builder.Build();
 
             app.MapHub<ChatHub>("/chatHub");
@@ -57,7 +101,7 @@ namespace ChatApi {
             using (var scope = app.Services.CreateScope()) {
 
                 var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                
+
                 // Ensure database is created and apply all pending migrations
                 try {
                     Console.WriteLine("Checking database connection...");
@@ -104,7 +148,7 @@ namespace ChatApi {
             app.UseAuthentication();
             app.UseAuthorization();
 
-
+            app.UseRateLimiter();
             app.MapControllers();
 
             app.Run();

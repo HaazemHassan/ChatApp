@@ -2,6 +2,7 @@
 using ChatApi.Core.Features.Authentication.Commands.RequestsModels;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using School.Core.Features.Authentication.Commands.Models;
 
 namespace ChatApi.Controllers {
@@ -19,6 +20,7 @@ namespace ChatApi.Controllers {
 
 
         [HttpPost("login")]
+        [EnableRateLimiting("loginLimiter")]
         public async Task<IActionResult> Login([FromBody] SignInCommand command) {
             var result = await mediator.Send(command);
             return NewResult(result);
