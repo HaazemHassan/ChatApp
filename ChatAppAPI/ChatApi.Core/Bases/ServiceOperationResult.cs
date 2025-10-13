@@ -2,6 +2,7 @@ using ChatApi.Core.Enums;
 
 namespace ChatApi.Core.Bases {
     public class ServiceOperationResult<T> {
+
         public ServiceOperationStatus Status { get; private set; }
         public string? ErrorMessage { get; private set; }
         public T? Data { get; private set; }
