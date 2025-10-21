@@ -13,7 +13,8 @@ using School.Core.Features.Authentication.Commands.Models;
 namespace ChatApi.Core.Features.Authentication.Commands.Handlers {
     public class AuthenticationCommandHandler : ResponseHandler, IRequestHandler<RegisterCommand, Response<string>>,
                                                                  IRequestHandler<SignInCommand, Response<JwtResult>>,
-                                                                 IRequestHandler<RefreshTokenCommand, Response<JwtResult>> {
+                                                                 IRequestHandler<RefreshTokenCommand, Response<JwtResult>>,
+                                                                 IRequestHandler<GoogleLoginCommand, Response<JwtResult>> {
 
 
         private readonly IMapper _mapper;
@@ -76,10 +77,25 @@ namespace ChatApi.Core.Features.Authentication.Commands.Handlers {
                 return jwtResult is null ? Unauthorized<JwtResult>() : Success(jwtResult);
 
             }
-            catch (Exception e) {
+            catch (Exception) {
                 return Unauthorized<JwtResult>();
             }
 
+        }
+
+        public async Task<Response<JwtResult>> Handle(GoogleLoginCommand request, CancellationToken cancellationToken) {
+            if (_currentUserService.IsAuthenticated)
+                return BadRequest<JwtResult>("You are already signed in");
+
+            var serviceResult = await _authenticationService.GoogleAuthenticateAsync(request.IdToken);
+
+            return serviceResult.Status switch {
+                ServiceOperationStatus.Unauthorized => Unauthorized<JwtResult>(serviceResult.ErrorMessage ?? "Invalid Google token"),
+                ServiceOperationStatus.InvalidParameters => BadRequest<JwtResult>(serviceResult.ErrorMessage ?? "Invalid parameters"),
+                ServiceOperationStatus.Failed => BadRequest<JwtResult>(serviceResult.ErrorMessage ?? "Authentication failed"),
+                ServiceOperationStatus.Succeeded => Success(serviceResult.Data!),
+                _ => BadRequest<JwtResult>("An unexpected error occurred")
+            };
         }
     }
 }

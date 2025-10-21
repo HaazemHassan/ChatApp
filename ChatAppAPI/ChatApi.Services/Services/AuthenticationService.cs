@@ -1,8 +1,12 @@
 ﻿using ChatApi.Core.Abstracts.InfrastructureAbstracts;
 using ChatApi.Core.Abstracts.ServicesContracts;
+using ChatApi.Core.Bases;
 using ChatApi.Core.Bases.Authentication;
 using ChatApi.Core.Entities.IdentityEntities;
+using ChatApi.Core.Enums;
+using ChatApi.Core.Features.Users.Queries.Responses;
 using ChatApi.Infrastructure.Data;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -19,16 +23,18 @@ namespace ChatApi.Services.Services {
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IApplicationUserService _applicationUserService;
         private readonly AppDbContext _context;
+        private readonly GoogleAuthSettings _googleAuthSettings;
         //private readonly IEmailService _emailService;
 
 
 
-        public AuthenticationService(JwtSettings jwtSettings, UserManager<ApplicationUser> userManager, IRefreshTokenRepository refreshTokenRepository, IApplicationUserService applicationUserService, AppDbContext context /*IEmailService emailService*/) {
+        public AuthenticationService(JwtSettings jwtSettings, UserManager<ApplicationUser> userManager, IRefreshTokenRepository refreshTokenRepository, IApplicationUserService applicationUserService, AppDbContext context, GoogleAuthSettings googleAuthSettings /*IEmailService emailService*/) {
             _jwtSettings = jwtSettings;
             _userManager = userManager;
             _refreshTokenRepository = refreshTokenRepository;
             _applicationUserService = applicationUserService;
             _context = context;
+            _googleAuthSettings = googleAuthSettings;
             //_emailService = emailService;
         }
 
@@ -88,6 +94,65 @@ namespace ChatApi.Services.Services {
 
             return jwtResult;
 
+        }
+
+        public async Task<ServiceOperationResult<JwtResult?>> GoogleAuthenticateAsync(string idToken) {
+            // Verify Google ID Token
+            GoogleJsonWebSignature.Payload? payload;
+            try {
+                var settings = new GoogleJsonWebSignature.ValidationSettings {
+                    Audience = new[] { _googleAuthSettings.ClientId }
+                };
+
+                payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+            }
+            catch {
+                return ServiceOperationResult<JwtResult?>.Failure(ServiceOperationStatus.Unauthorized, "Invalid Google token");
+            }
+
+            if (payload == null || string.IsNullOrEmpty(payload.Email))
+                return ServiceOperationResult<JwtResult?>.Failure(ServiceOperationStatus.InvalidParameters, "Invalid Google token payload");
+
+            // Check if user exists
+            var user = await _userManager.FindByEmailAsync(payload.Email);
+
+            if (user == null) {
+                // Create new user
+                user = new ApplicationUser {
+                    Email = payload.Email,
+                    UserName = payload.Email,
+                    FullName = payload.Name ?? payload.Email,
+                    EmailConfirmed = payload.EmailVerified,
+                    IsOnline = false
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
+                if (!createResult.Succeeded) {
+                    var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                    return ServiceOperationResult<JwtResult?>.Failure(ServiceOperationStatus.Failed, $"Failed to create user: {errors}");
+                }
+
+                // Add default role
+                var roleResult = await _userManager.AddToRoleAsync(user, "User");
+                if (!roleResult.Succeeded) {
+                    return ServiceOperationResult<JwtResult?>.Failure(ServiceOperationStatus.Failed, "Failed to assign user role");
+                }
+            }
+
+            // Generate JWT token
+            var jwtResult = await AuthenticateAsync(user, null);
+            if (jwtResult == null)
+                return ServiceOperationResult<JwtResult?>.Failure(ServiceOperationStatus.Failed, "Failed to generate authentication token");
+
+            // Fill user info in result
+            jwtResult.User = new GetUserByIdResponse {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                FullName = user.FullName
+            };
+
+            return ServiceOperationResult<JwtResult?>.Success(jwtResult);
         }
 
         public ClaimsPrincipal? GetPrincipalFromAcessToken(string token, bool validateLifetime = true) {

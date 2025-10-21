@@ -7,6 +7,7 @@ import { BehaviorSubject, catchError, map, Observable, tap, throwError } from 'r
 import { LoginRequest } from '../models/auth/requests/login-request';
 import { RegisterRequest } from '../models/auth/requests/register-request';
 import { RefreshTokenRequest } from '../models/auth/requests/refresh-token-request';
+import { GoogleSignInRequest } from '../models/auth/requests/google-signin-request';
 import { LoginResponse } from '../models/auth/responses/login-response';
 import { environment } from '../../environments/environment';
 import { User } from '../models/interfaces/userInterface';
@@ -75,6 +76,34 @@ export class AuthenticationService {
               document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
             }
             this.setAuthenticatedUser(response.data.user);
+          }
+          return response;
+        }),
+        catchError((error: HttpErrorResponse) => {
+          const apiError = error.error as ApiResponse<null>;
+          return throwError(() => new Error(apiError.message));
+        })
+      );
+  }
+
+  googleSignIn(googleToken: GoogleSignInRequest): Observable<ApiResponse<LoginResponse>> {
+    return this.httpClient
+      .post<ApiResponse<LoginResponse>>(
+        `${environment.apiUrl}/authentication/google-login`,
+        googleToken
+      )
+      .pipe(
+        map((response: ApiResponse<LoginResponse>) => {
+          if (response.succeeded && response.data) {
+            localStorage.setItem('accessToken', response.data.accessToken);
+            if (response.data.refreshToken) {
+              document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
+            }
+            console.log('Google Sign-In successful, setting authenticated user:', response.data.user);
+            this.setAuthenticatedUser(response.data.user);
+            if (this.isAuthenticated()) {
+              this.chatHubService.startConnection(this.getAccessToken());
+            }
           }
           return response;
         }),

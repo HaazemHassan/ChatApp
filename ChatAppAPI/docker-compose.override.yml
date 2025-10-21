@@ -39,7 +39,7 @@ services:
 
   chatappui:
     ports:
-      - "5000:80"
+      - "45000:80"
 
 volumes:
   chatapi_sqlserver_data:

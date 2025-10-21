@@ -192,6 +192,42 @@
   height: 300px;
 }
 
+/* Divider */
+.divider {
+  margin: 24px 0;
+  text-align: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.divider-text {
+  padding: 0 16px;
+  font-size: 14px;
+  color: var(--text-light);
+  font-weight: 500;
+  background: white;
+  z-index: 1;
+}
+
+/* Google Sign-In Container */
+.google-signin-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
 /* Footer */
 .login-footer {
   margin-top: 32px;

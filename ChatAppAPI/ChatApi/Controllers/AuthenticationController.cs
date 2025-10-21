@@ -3,7 +3,6 @@ using ChatApi.Core.Features.Authentication.Commands.RequestsModels;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using School.Core.Features.Authentication.Commands.Models;
 
 namespace ChatApi.Controllers {
 
@@ -26,8 +25,9 @@ namespace ChatApi.Controllers {
             return NewResult(result);
         }
 
-        [HttpPost("Refresh-token")]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command) {
+        [HttpPost("google-login")]
+        [EnableRateLimiting("loginLimiter")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginCommand command) {
             var result = await mediator.Send(command);
             return NewResult(result);
         }

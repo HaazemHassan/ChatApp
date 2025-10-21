@@ -20,6 +20,11 @@ namespace ChatApi.Extentions {
             configuration.GetSection(nameof(jwtSettings)).Bind(jwtSettings);
             services.AddSingleton(jwtSettings);
 
+            //Google Authentication
+            var googleAuthSettings = new GoogleAuthSettings();
+            configuration.GetSection("GoogleAuth").Bind(googleAuthSettings);
+            services.AddSingleton(googleAuthSettings);
+
             services.AddAuthentication(x => {
                 x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;

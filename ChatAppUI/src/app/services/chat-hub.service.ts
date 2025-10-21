@@ -22,10 +22,10 @@ export class ChatHubService {
       console.error('No access token found. User might not be authenticated.');
       return;
     }
-    // Use environment-based URL - in production it will use relative path '/chatHub'
+
     const hubUrl = environment.production
       ? '/chatHub'  // Relative URL for production (will use nginx proxy)
-      : 'https://localhost:44318/chatHub';  // Direct URL for development
+      : environment.hubUrl;  // Direct URL for development
 
 
 
