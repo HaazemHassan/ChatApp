@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch ChatApi (.NET Core)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build ChatApi",
+      "program": "${workspaceFolder}/ChatAppAPI/ChatApi/bin/Debug/net8.0/ChatApi.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/ChatAppAPI/ChatApi",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/swagger/index.html"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Launch ChatAppUI (External Browser)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--", "--open"],
+      "cwd": "${workspaceFolder}/ChatAppUI",
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch Fullstack (API + UI)",
+      "configurations": [
+        "Launch ChatApi (.NET Core)",
+        "Launch ChatAppUI (External Browser)"
+      ]
+    }
+  ]
+}

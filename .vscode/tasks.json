@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build ChatApi",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/ChatAppAPI/ChatApi/ChatApi.csproj",
+        "-c",
+        "Debug"
+      ],
+      "problemMatcher": ["$msCompile"]
+    }
+  ]
+}
