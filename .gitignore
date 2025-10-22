@@ -462,3 +462,4 @@ FodyWeavers.xsd
 **/.env.local
 **/.env.*.local
 **/appsettings.Development.json
+**/appsettings.Production.json

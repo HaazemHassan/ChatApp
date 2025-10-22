@@ -7,6 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Features\Conversations\**" />
+    <Compile Remove="Features\Messages\**" />
+    <EmbeddedResource Remove="Features\Conversations\**" />
+    <EmbeddedResource Remove="Features\Messages\**" />
+    <None Remove="Features\Conversations\**" />
+    <None Remove="Features\Messages\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AutoMapper" Version="15.0.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
     <PackageReference Include="Google.Apis.Auth" Version="1.72.0" />
@@ -23,8 +32,6 @@
     <Folder Include="Features\Authentication\Queries\Handlers\" />
     <Folder Include="Features\Authentication\Queries\RequestsModels\" />
     <Folder Include="Features\Authentication\Queries\Responses\" />
-    <Folder Include="Features\Conversations\" />
-    <Folder Include="Features\Messages\" />
     <Folder Include="Features\Users\Commands\" />
     <Folder Include="Mapping\Authentication\QueryMapping\" />
   </ItemGroup>

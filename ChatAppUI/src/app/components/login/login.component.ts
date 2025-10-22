@@ -11,6 +11,7 @@ import { LoginRequest } from '../../models/auth/requests/login-request';
 import { GoogleSignInRequest } from '../../models/auth/requests/google-signin-request';
 import { AuthenticationService } from '../../services/authentication.service';
 import { environment } from '../../../environments/environment';
+import { GoogleSignInLoaderService } from '../../services/google-signin-loader.service';
 
 declare const google: any;
 
@@ -30,6 +31,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
     private formBuilder: FormBuilder,
     private router: Router,
     private route: ActivatedRoute,
+    private googleSignInLoader: GoogleSignInLoaderService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.loginForm = this.formBuilder.group({
@@ -47,8 +49,9 @@ export class LoginComponent implements OnInit, AfterViewInit {
     }
   }
 
-  ngAfterViewInit(): void {
+  async ngAfterViewInit() {
     if (isPlatformBrowser(this.platformId)) {
+      await this.googleSignInLoader.loadScript();
       this.initializeGoogleOneTap();
     }
   }
