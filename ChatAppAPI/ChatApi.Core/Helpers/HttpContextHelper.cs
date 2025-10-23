@@ -16,8 +16,6 @@ namespace ChatApi.Core.Helpers {
             // Check X-Forwarded-For header (set by proxies/load balancers)
             var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
             if (!string.IsNullOrEmpty(forwardedFor)) {
-                // X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2, ...)
-                // Take the first one (original client IP)
                 var ips = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries);
                 if (ips.Length > 0) {
                     var clientIp = ips[0].Trim();

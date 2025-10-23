@@ -1,4 +1,5 @@
-﻿using ChatApi.Core.Abstracts.InfrastructureAbstracts;
+﻿using AutoMapper;
+using ChatApi.Core.Abstracts.InfrastructureAbstracts;
 using ChatApi.Core.Abstracts.ServicesContracts;
 using ChatApi.Core.Bases;
 using ChatApi.Core.Bases.Authentication;
@@ -24,17 +25,19 @@ namespace ChatApi.Services.Services {
         private readonly IApplicationUserService _applicationUserService;
         private readonly AppDbContext _context;
         private readonly GoogleAuthSettings _googleAuthSettings;
+        private readonly IMapper _mapper;
         //private readonly IEmailService _emailService;
 
 
 
-        public AuthenticationService(JwtSettings jwtSettings, UserManager<ApplicationUser> userManager, IRefreshTokenRepository refreshTokenRepository, IApplicationUserService applicationUserService, AppDbContext context, GoogleAuthSettings googleAuthSettings /*IEmailService emailService*/) {
+        public AuthenticationService(JwtSettings jwtSettings, UserManager<ApplicationUser> userManager, IRefreshTokenRepository refreshTokenRepository, IApplicationUserService applicationUserService, AppDbContext context, GoogleAuthSettings googleAuthSettings, IMapper mapper /*IEmailService emailService*/) {
             _jwtSettings = jwtSettings;
             _userManager = userManager;
             _refreshTokenRepository = refreshTokenRepository;
             _applicationUserService = applicationUserService;
             _context = context;
             _googleAuthSettings = googleAuthSettings;
+            _mapper = mapper;
             //_emailService = emailService;
         }
 
@@ -55,23 +58,19 @@ namespace ChatApi.Services.Services {
         }
 
         public async Task<JwtResult?> ReAuthenticateAsync(string refreshToken, string accessToken) {
-            //Validate token
-            var principal = GetPrincipalFromAcessToken(accessToken);
+            var principal = GetPrincipalFromAcessToken(accessToken, validateLifetime: false);
             if (principal is null)
                 throw new SecurityTokenException();
 
-            //Read Token To get Cliams
             var jwt = ReadJWT(accessToken);
             if (jwt is null)
                 throw new SecurityTokenException("Can't read this token");
 
 
-            //Get User from calims
             var userId = jwt.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier)?.Value;
             if (userId is null)
                 throw new Exception("User id is null");
 
-            //check if user still exists in db
             var user = await _userManager.FindByIdAsync(userId);
             if (user is null)
                 throw new SecurityTokenException("User Is Not Found");
@@ -91,6 +90,8 @@ namespace ChatApi.Services.Services {
             currentRefreshToken.ReplacedByToken = jwtResult.RefreshToken.Token;
             currentRefreshToken.RevokationDate = DateTime.UtcNow;
             await _refreshTokenRepository.UpdateAsync(currentRefreshToken);
+
+            jwtResult.User = _mapper.Map<GetUserByIdResponse>(user);
 
             return jwtResult;
 
@@ -159,11 +160,12 @@ namespace ChatApi.Services.Services {
             var tokenValidationParameters = new TokenValidationParameters {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret)),
-                ValidateIssuer = true,
+                ValidateIssuer = false,
                 ValidateAudience = true,
                 ValidIssuer = _jwtSettings.Issuer,
                 ValidAudience = _jwtSettings.Audience,
-                ValidateLifetime = validateLifetime
+                ValidateLifetime = validateLifetime,
+                ClockSkew = TimeSpan.FromMinutes(2)  //default = 5 min (security gap)
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -177,7 +179,8 @@ namespace ChatApi.Services.Services {
 
                 return principal;
             }
-            catch {
+            catch (Exception e) {
+                Console.WriteLine($"Error occurred while validating token: {e.Message}");
                 return null;
             }
         }

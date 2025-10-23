@@ -5,6 +5,7 @@
 export const NON_AUTHENTICATED_ENDPOINTS = [
   '/authentication/login',
   '/authentication/register',
+  '/authentication/refresh-token',
   '/authentication/forgot-password',
   '/authentication/reset-password',
   '/authentication/verify-email',

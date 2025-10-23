@@ -73,6 +73,7 @@ namespace ChatApi.Core.Features.Authentication.Commands.Handlers {
 
         public async Task<Response<JwtResult>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken) {
             try {
+                
                 JwtResult? jwtResult = await _authenticationService.ReAuthenticateAsync(request.RefreshToken, request.AccessToken);
                 return jwtResult is null ? Unauthorized<JwtResult>() : Success(jwtResult);
 

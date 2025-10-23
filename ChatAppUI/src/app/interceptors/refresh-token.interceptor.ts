@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthenticationService } from '../services/authentication.service';
 import { shouldSkipAuthentication } from './non-authenticated-endpoints';
+import { Router } from '@angular/router';
 
 export const refreshTokenInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthenticationService);
@@ -32,9 +33,7 @@ export const refreshTokenInterceptor: HttpInterceptorFn = (req, next) => {
             }
           }),
           catchError((refreshError) => {
-            // If refresh fails, clear tokens
             authService.clearTokens();
-            // You might want to redirect to login page here
             // const router = inject(Router);
             // router.navigate(['/login']);
             return throwError(() => refreshError);

@@ -58,7 +58,6 @@ export class ConversationsComponent implements OnInit {
     });
 
     this.chatHubService.onReceiveMessage(async (message: MessageResponse) => {
-      console.log('Received message via SignalR:', message);
       this.handleMessageReceived(message);
       try {
         const currentUserId = this.authService.getCurrentUser()?.id;

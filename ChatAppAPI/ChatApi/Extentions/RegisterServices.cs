@@ -40,6 +40,7 @@ namespace ChatApi.Extentions {
                    ValidAudience = jwtSettings.Audience,
                    ValidateAudience = jwtSettings.ValidateAudience,
                    ValidateLifetime = jwtSettings.ValidateLifeTime,
+                   ClockSkew = TimeSpan.FromMinutes(2)  
                };
 
 

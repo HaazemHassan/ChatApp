@@ -9,14 +9,12 @@ namespace ChatApi.Services {
             services.AddTransient<IApplicationUserService, ApplicationUserService>();
             services.AddTransient<IAuthenticationService, AuthenticationService>();
             
-            // Chat services
             services.AddTransient<IMessagesService, MessagesService>();
             services.AddTransient<IConversationsService, ConversationsService>();
             services.AddTransient<IConnectionService, ConnectionService>();
-            
-            // Current user service
             services.AddTransient<ICurrentUserService, CurrentUserService>();
-            
+            services.AddTransient<ITokenService, TokenService>();
+
             return services;
         }
     }

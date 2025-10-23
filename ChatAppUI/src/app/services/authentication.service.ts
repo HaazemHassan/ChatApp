@@ -11,6 +11,7 @@ import { GoogleSignInRequest } from '../models/auth/requests/google-signin-reque
 import { LoginResponse } from '../models/auth/responses/login-response';
 import { environment } from '../../environments/environment';
 import { User } from '../models/interfaces/userInterface';
+import { getCookieValue } from '../helpers/cookies-reader/cookies-helper';
 
 @Injectable({
   providedIn: 'root',
@@ -37,19 +38,16 @@ export class AuthenticationService {
     return this.httpClient
       .post<ApiResponse<LoginResponse>>(
         `${environment.apiUrl}/authentication/login`,
-        credentials
+        credentials, { withCredentials: true }
       )
       .pipe(
         map((response: ApiResponse<LoginResponse>) => {
           if (response.succeeded && response.data) {
             localStorage.setItem('accessToken', response.data.accessToken);
-            if (response.data.refreshToken) {
-              document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
-            }
             this.setAuthenticatedUser(response.data.user);
-            if (this.isAuthenticated()) {
+            if (this.isAuthenticated())
               this.chatHubService.startConnection(this.getAccessToken());
-            }
+
           }
 
           return response;
@@ -65,16 +63,12 @@ export class AuthenticationService {
     return this.httpClient
       .post<ApiResponse<LoginResponse>>(
         `${environment.apiUrl}/authentication/register`,
-        userData
+        userData, { withCredentials: true }
       )
       .pipe(
         map((response: ApiResponse<LoginResponse>) => {
           if (response.succeeded && response.data) {
-            // Automatically log in the user after successful registration
             localStorage.setItem('accessToken', response.data.accessToken);
-            if (response.data.refreshToken) {
-              document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
-            }
             this.setAuthenticatedUser(response.data.user);
           }
           return response;
@@ -90,20 +84,16 @@ export class AuthenticationService {
     return this.httpClient
       .post<ApiResponse<LoginResponse>>(
         `${environment.apiUrl}/authentication/google-login`,
-        googleToken
+        googleToken, { withCredentials: true }
       )
       .pipe(
         map((response: ApiResponse<LoginResponse>) => {
           if (response.succeeded && response.data) {
             localStorage.setItem('accessToken', response.data.accessToken);
-            if (response.data.refreshToken) {
-              document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
-            }
-            console.log('Google Sign-In successful, setting authenticated user:', response.data.user);
             this.setAuthenticatedUser(response.data.user);
-            if (this.isAuthenticated()) {
+            if (this.isAuthenticated())
               this.chatHubService.startConnection(this.getAccessToken());
-            }
+
           }
           return response;
         }),
@@ -119,7 +109,7 @@ export class AuthenticationService {
     return this.httpClient
       .post<ApiResponse<void>>(
         `${environment.apiUrl}/authentication/logout`,
-        {}
+        { withCredentials: true }
       )
       .pipe(
         tap(() => {
@@ -137,38 +127,29 @@ export class AuthenticationService {
 
   refreshToken(): Observable<ApiResponse<LoginResponse>> {
     const accessToken = this.getAccessToken();
-    const refreshToken = this.getRefreshTokenFromCookie();
 
-    if (!accessToken || !refreshToken) {
-      return throwError(() => new Error('No tokens available for refresh'));
-    }
+    if (!accessToken)
+      return throwError(() => new Error('No access token available for refresh'));
+
 
     const refreshRequest: RefreshTokenRequest = {
       accessToken: accessToken,
-      refreshToken: refreshToken,
     };
 
     return this.httpClient
       .post<ApiResponse<LoginResponse>>(
         `${environment.apiUrl}/authentication/refresh-token`,
-        refreshRequest
+        refreshRequest, { withCredentials: true }
       )
       .pipe(
         map((response: ApiResponse<LoginResponse>) => {
           if (response.succeeded && response.data) {
-            // Update stored tokens with new ones
             localStorage.setItem('accessToken', response.data.accessToken);
-            if (response.data.refreshToken) {
-              document.cookie = `refreshToken=${response.data.refreshToken.token}; path=/`;
-            }
-            if (response.data.user) {
-              this.setAuthenticatedUser(response.data.user);
-            }
+            this.setAuthenticatedUser(response.data.user);
           }
           return response;
         }),
         catchError((error) => {
-          console.error('Token refresh failed:', error);
           this.clearTokens();
           return throwError(() => error);
         })
@@ -189,20 +170,6 @@ export class AuthenticationService {
     return user ? (JSON.parse(user) as User).id : null;
   }
 
-  getRefreshToken(): string | null {
-    return this.getRefreshTokenFromCookie();
-  }
-
-  getRefreshTokenFromCookie(): string | null {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'refreshToken') {
-        return value;
-      }
-    }
-    return null;
-  }
 
   isAuthenticated(): boolean {
     const token = this.getAccessToken();
@@ -211,8 +178,6 @@ export class AuthenticationService {
 
   clearTokens(): void {
     localStorage.removeItem('accessToken');
-    document.cookie =
-      'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   }
 
   removeCurrentUser(): void {
